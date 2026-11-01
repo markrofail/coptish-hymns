@@ -1,0 +1,29 @@
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+
+# macOS
+.DS_Store
+
+# Keys
+.env
+.env.*
+
+# Audio: never committed
+*.wav
+*.mp3
+*.flac
+*.m4a
+*.aac
+*.ogg
+*.opus
+
+# Model weights: kept in a cache outside the repo
+*.onnx
+*.pt
+*.pth
+*.ckpt
+*.safetensors

@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="340" viewBox="0 0 380 170" font-family="-apple-system, 'Helvetica Neue', Helvetica, Arial, sans-serif">
+<title>String notation: the demo phrase</title>
+<desc>An invented phrase drawn as one continuous string. Levels are 20 units apart; a full note is about 25 units long. Purple marks motif 1, teal the other notes; beads mark where each new note starts.</desc>
+<rect width="380" height="170" fill="#ffffff"/>
+<g fill="none" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+<path d="M40 108 L65 108" stroke="#7F77DD"/>
+<path d="M65 108 C68 108 68 88 71 88" stroke="#7F77DD"/>
+<path d="M71 88 L79 88" stroke="#7F77DD"/>
+<path d="M79 88 C82 88 82 108 85 108" stroke="#7F77DD"/>
+<path d="M85 108 L93 108" stroke="#7F77DD"/>
+<path d="M93 108 C96 108 96 88 99 88" stroke="#1D9E75"/>
+<path d="M99 88 q1.5 -7 3 0 t3 0 t3 0 t3 0 t3 0 t3 0 t3 0 t3 0 L124 88" stroke="#1D9E75"/>
+<path d="M124 88 L149 88" stroke="#888780" stroke-width="1.5" stroke-dasharray="0.5 4"/>
+<path d="M149 88 C152 88 152 108 155 108" stroke="#1D9E75"/>
+<path d="M155 108 L163 108" stroke="#1D9E75"/>
+<path d="M163 108 C166 108 166 88 169 88" stroke="#1D9E75"/>
+<path d="M169 88 L177 88" stroke="#1D9E75"/>
+<path d="M177 88 C180 88 180 68 183 68" stroke="#1D9E75"/>
+<path d="M183 68 L194 68" stroke="#1D9E75"/>
+<path d="M194 68 L208 68" stroke="#1D9E75" stroke-width="1.5" stroke-dasharray="3 2.5" stroke-linecap="butt"/>
+<path d="M208 68 L236 68" stroke="#1D9E75"/>
+<path d="M236 68 L236 108" stroke="#1D9E75"/>
+<path d="M236 108 L261 108" stroke="#7F77DD"/>
+<path d="M261 108 C264 108 264 88 267 88" stroke="#7F77DD"/>
+<path d="M267 88 L275 88" stroke="#7F77DD"/>
+<path d="M275 88 C278 88 278 108 281 108" stroke="#7F77DD"/>
+<path d="M281 108 L289 108" stroke="#7F77DD"/>
+<path d="M289 108 C292 108 292 128 295 128" stroke="#1D9E75"/>
+<path d="M295 128 L348 128" stroke="#1D9E75"/>
+</g>
+<g>
+<circle cx="40" cy="108" r="3" fill="#7F77DD"/>
+<circle cx="71" cy="88" r="3" fill="#7F77DD"/>
+<circle cx="85" cy="108" r="3" fill="#7F77DD"/>
+<circle cx="99" cy="88" r="3" fill="#1D9E75"/>
+<circle cx="155" cy="108" r="3" fill="#1D9E75"/>
+<circle cx="169" cy="88" r="3" fill="#1D9E75"/>
+<circle cx="183" cy="68" r="3" fill="#1D9E75"/>
+<circle cx="194" cy="68" r="3" fill="#1D9E75"/>
+<circle cx="208" cy="68" r="3" fill="#1D9E75"/>
+<circle cx="236" cy="108" r="3" fill="#7F77DD"/>
+<circle cx="267" cy="88" r="3" fill="#7F77DD"/>
+<circle cx="281" cy="108" r="3" fill="#7F77DD"/>
+<circle cx="295" cy="128" r="3" fill="#1D9E75"/>
+</g>
+<text x="66" y="76" text-anchor="middle" font-size="12" fill="#5F5E5A">①</text>
+<text x="262" y="76" text-anchor="middle" font-size="12" fill="#5F5E5A">①</text>
+<path d="M152 52 L152 46 L194 46 L194 52" fill="none" stroke="#5F5E5A" stroke-width="1"/>
+<text x="173" y="38" text-anchor="middle" font-size="12" fill="#5F5E5A">×3 ↗</text>
+<circle cx="138" cy="72" r="2.5" fill="#5F5E5A"/>
+<path d="M140.3 72.5 q0.5 5 -3.5 8" fill="none" stroke="#5F5E5A" stroke-width="1.5" stroke-linecap="round"/>
+<text x="40" y="156" font-size="14" fill="#2C2C2A">A</text>
+<text x="96" y="156" font-size="14" fill="#2C2C2A">lē</text>
+<text x="152" y="156" font-size="14" fill="#2C2C2A">lou</text>
+<text x="194" y="156" font-size="14" fill="#2C2C2A">i</text>
+<line x1="194" y1="160" x2="201" y2="160" stroke="#2C2C2A" stroke-width="1"/>
+<text x="208" y="156" font-size="14" fill="#2C2C2A">a</text>
+<text x="236" y="156" font-size="12" fill="#5F5E5A">(a)</text>
+</svg>
