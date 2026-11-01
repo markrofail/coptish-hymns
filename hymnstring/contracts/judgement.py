@@ -5,6 +5,7 @@ from typing import Literal, Self
 from pydantic import Field, model_validator
 
 from hymnstring.contracts.base import Contract, NonEmpty, OneLine, Positive, Score, TimeSpan
+from hymnstring.notation import parse_hymn, parse_line, validate, write_hymn, write_line
 
 FormatVersion = Literal[1]
 
@@ -22,7 +23,7 @@ class Patterns(Contract):
 
 
 class PhraseString(Contract):
-    """One phrase. `notation` is the text form in hymnstring/notation/SPEC.md."""
+    """One phrase. `notation` is the canonical text form in hymnstring/notation/SPEC.md."""
 
     phrase_id: NonEmpty
     direction: Literal["ltr", "rtl"]
@@ -38,6 +39,17 @@ class HymnString(Contract):
         ids = [phrase.phrase_id for phrase in self.phrases]
         if len(ids) != len(set(ids)):
             raise ValueError("phrase ids must be unique")
+        return self
+
+    @model_validator(mode="after")
+    def notation_is_canonical_and_valid(self) -> Self:
+        text = "\n".join(f"{p.phrase_id} {p.direction}: {p.notation}" for p in self.phrases)
+        hymn = parse_hymn(text)  # a NotationError is a ValueError, so pydantic reports it
+        if write_hymn(hymn) != text:
+            raise ValueError("notation must be written in canonical form")
+        problems = validate(hymn)
+        if problems:
+            raise ValueError("invalid notation: " + "; ".join(f"{p.phrase_id} {p.rule}" for p in problems))
         return self
 
 
@@ -88,6 +100,14 @@ class ReviewRecord(Contract):
     def a_fix_changes_something(self) -> Self:
         if self.before == self.after:
             raise ValueError("a fix must change the notation")
+        return self
+
+    @model_validator(mode="after")
+    def both_sides_are_canonical(self) -> Self:
+        for text in (self.before, self.after):
+            line = f"{self.phrase_id} ltr: {text}"
+            if write_line(parse_line(line)) != line:
+                raise ValueError("before and after must be canonical notation")
         return self
 
 
