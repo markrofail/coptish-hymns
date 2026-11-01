@@ -1,10 +1,10 @@
 {
   "voice": {
-    "path": "work/demo/vocals.flac",
+    "path": "work/demo/recording.flac",
     "sample_rate_hz": 44100,
     "duration_s": 11.0,
-    "bypassed": false,
-    "accompaniment_path": "work/demo/accompaniment.flac"
+    "backend": "bypass",
+    "accompaniment_path": null
   },
   "pitch_track": {
     "hop_s": 0.01,

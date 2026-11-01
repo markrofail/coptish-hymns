@@ -13,7 +13,10 @@ from hymnstring.contracts.base import (
     Seconds,
     TimeSpan,
     require_counting_up,
+    require_in_time_order,
 )
+
+SeparationBackend = Literal["bypass", "demucs", "roformer"]
 
 
 class Recording(Contract):
@@ -21,13 +24,22 @@ class Recording(Contract):
 
 
 class Voice(Contract):
-    """The isolated voice. The accompaniment stem is kept for cymbal hits."""
+    """What later nodes listen to. When bypassed, `path` is the full mix.
+
+    A separation backend also keeps the accompaniment stem, for cymbal hits.
+    """
 
     path: NonEmpty
     sample_rate_hz: Annotated[int, Field(gt=0)]
     duration_s: Positive
-    bypassed: bool
+    backend: SeparationBackend
     accompaniment_path: NonEmpty | None
+
+    @model_validator(mode="after")
+    def only_separation_leaves_an_accompaniment(self) -> Self:
+        if (self.backend == "bypass") != (self.accompaniment_path is None):
+            raise ValueError("a separation backend keeps an accompaniment; bypass has none")
+        return self
 
 
 class Vibrato(TimeSpan):
@@ -56,16 +68,35 @@ class PulseSection(TimeSpan):
 
 
 class PulseUnit(Contract):
-    """Lengths are relative within a hymn or a part of it, so each part has its own unit."""
+    """Lengths are relative within a hymn or a part of it, so each part has its own unit.
+
+    One section by default, split at verse boundaries or long pauses.
+    """
 
     source: Literal["note_durations", "cymbals"]
     sections: tuple[PulseSection, ...] = Field(min_length=1)
 
     @model_validator(mode="after")
     def sections_do_not_overlap(self) -> Self:
-        for earlier, later in zip(self.sections, self.sections[1:]):
-            if later.start_s < earlier.end_s:
-                raise ValueError("sections must be in time order and must not overlap")
+        require_in_time_order(self.sections, "sections")
+        return self
+
+
+class StepSection(TimeSpan):
+    """step_cents is null when a section has no stable intervals to measure."""
+
+    step_cents: Positive | None
+    confidence: Score
+
+
+class StepSize(Contract):
+    """How big one level is, measured per pulse section. Never a scale degree."""
+
+    sections: tuple[StepSection, ...] = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def sections_do_not_overlap(self) -> Self:
+        require_in_time_order(self.sections, "sections")
         return self
 
 
@@ -83,9 +114,7 @@ class SyllableTimes(Contract):
     @model_validator(mode="after")
     def syllables_in_order(self) -> Self:
         require_counting_up([time.syllable_index for time in self.syllables], "syllable indices")
-        for earlier, later in zip(self.syllables, self.syllables[1:]):
-            if later.start_s < earlier.end_s:
-                raise ValueError("syllables must be in time order and must not overlap")
+        require_in_time_order(self.syllables, "syllables")
         return self
 
 

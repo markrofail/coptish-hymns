@@ -5,12 +5,21 @@ from hymnstring.contracts.audio import (
     PitchTrack,
     PulseUnit,
     Recording,
+    SeparationBackend,
+    StepSize,
     SyllableTimes,
     Voice,
 )
 from hymnstring.contracts.base import Contract
 from hymnstring.contracts.judgement import HymnString, LibraryEntry, Patterns, RoundTripReport
 from hymnstring.contracts.text import PreparedText, Sounds
+
+
+class SeparationInput(Contract):
+    """`backend` is the setting that chooses how separation runs."""
+
+    recording: Recording
+    backend: SeparationBackend = "bypass"
 
 
 class AlignerInput(Contract):
@@ -22,6 +31,21 @@ class OnsetsInput(Contract):
     voice: Voice
     pitch_track: PitchTrack
     syllable_times: SyllableTimes
+
+
+class PulseInput(Contract):
+    """The text and syllable times place verse boundaries; the note starts give long pauses."""
+
+    voice: Voice
+    text: PreparedText
+    syllable_times: SyllableTimes
+    note_starts: NoteStarts
+
+
+class StepInput(Contract):
+    pitch_track: PitchTrack
+    note_starts: NoteStarts
+    pulse_unit: PulseUnit
 
 
 class MinerInput(Contract):
@@ -40,6 +64,7 @@ class InterpreterInput(Contract):
     sounds: Sounds
     pitch_track: PitchTrack
     pulse_unit: PulseUnit
+    step_size: StepSize
     note_starts: NoteStarts
     syllable_times: SyllableTimes
     patterns: Patterns
@@ -53,6 +78,7 @@ class RoundTripInput(Contract):
     text: PreparedText
     pitch_track: PitchTrack
     pulse_unit: PulseUnit
+    step_size: StepSize
     syllable_times: SyllableTimes
 
 

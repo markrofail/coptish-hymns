@@ -1,6 +1,7 @@
 """The base every contract shares, and the small types they are built from."""
 
 import unicodedata
+from collections.abc import Sequence
 from typing import Annotated, Self
 
 from pydantic import AfterValidator, BaseModel, ConfigDict, Field, model_validator
@@ -45,3 +46,9 @@ class TimeSpan(Contract):
 def require_counting_up(indices: list[int], what: str) -> None:
     if indices != list(range(len(indices))):
         raise ValueError(f"{what} must count up from 0 with no gaps")
+
+
+def require_in_time_order(spans: Sequence[TimeSpan], what: str) -> None:
+    for earlier, later in zip(spans, spans[1:]):
+        if later.start_s < earlier.end_s:
+            raise ValueError(f"{what} must be in time order and must not overlap")

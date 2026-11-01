@@ -1,0 +1,126 @@
+{
+  "pitch_track": {
+    "hop_s": 0.01,
+    "f0_hz": [
+      null,
+      196.0,
+      196.4,
+      195.8,
+      196.1
+    ],
+    "confidence": [
+      0.1,
+      0.9,
+      0.95,
+      0.9,
+      0.92
+    ],
+    "vibrato": [
+      {
+        "start_s": 2.0,
+        "end_s": 3.0,
+        "rate_hz": 5.5,
+        "width_cents": 60.0
+      }
+    ]
+  },
+  "note_starts": {
+    "notes": [
+      {
+        "start_s": 0.0,
+        "syllable_index": 0,
+        "cause": "syllable_start",
+        "confidence": 0.9
+      },
+      {
+        "start_s": 1.0,
+        "syllable_index": 0,
+        "cause": "pitch_change",
+        "confidence": 0.9
+      },
+      {
+        "start_s": 1.5,
+        "syllable_index": 0,
+        "cause": "pitch_change",
+        "confidence": 0.9
+      },
+      {
+        "start_s": 2.0,
+        "syllable_index": 1,
+        "cause": "syllable_start",
+        "confidence": 0.9
+      },
+      {
+        "start_s": 4.0,
+        "syllable_index": 2,
+        "cause": "syllable_start",
+        "confidence": 0.9
+      },
+      {
+        "start_s": 4.5,
+        "syllable_index": 2,
+        "cause": "pitch_change",
+        "confidence": 0.9
+      },
+      {
+        "start_s": 5.0,
+        "syllable_index": 2,
+        "cause": "pitch_change",
+        "confidence": 0.9
+      },
+      {
+        "start_s": 5.5,
+        "syllable_index": 3,
+        "cause": "syllable_start",
+        "confidence": 0.9
+      },
+      {
+        "start_s": 6.0,
+        "syllable_index": 4,
+        "cause": "syllable_start",
+        "confidence": 0.9
+      },
+      {
+        "start_s": 7.0,
+        "syllable_index": 4,
+        "cause": "pitch_change",
+        "confidence": 0.9
+      },
+      {
+        "start_s": 8.0,
+        "syllable_index": 4,
+        "cause": "pitch_change",
+        "confidence": 0.9
+      },
+      {
+        "start_s": 8.5,
+        "syllable_index": 4,
+        "cause": "pitch_change",
+        "confidence": 0.9
+      },
+      {
+        "start_s": 9.0,
+        "syllable_index": 4,
+        "cause": "pitch_change",
+        "confidence": 0.9
+      }
+    ],
+    "breaths": [
+      {
+        "start_s": 3.0,
+        "end_s": 4.0
+      }
+    ]
+  },
+  "pulse_unit": {
+    "source": "note_durations",
+    "sections": [
+      {
+        "start_s": 0.0,
+        "end_s": 11.0,
+        "half_note_s": 0.5,
+        "confidence": 0.9
+      }
+    ]
+  }
+}

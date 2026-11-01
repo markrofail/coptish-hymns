@@ -6,6 +6,8 @@ from pydantic import Field, model_validator
 
 from hymnstring.contracts.base import Contract, NonEmpty, OneLine, Positive, Score, TimeSpan
 
+FormatVersion = Literal[1]
+
 
 class Pattern(Contract):
     pattern_id: NonEmpty
@@ -28,7 +30,7 @@ class PhraseString(Contract):
 
 
 class HymnString(Contract):
-    format_version: Literal[1]
+    format_version: FormatVersion
     phrases: tuple[PhraseString, ...] = Field(min_length=1)
 
     @model_validator(mode="after")
@@ -52,16 +54,28 @@ class PhraseCheck(Contract):
         return self
 
 
-class RoundTripReport(Contract):
-    """step_cents is the level size fitted to this recording, for this check only."""
+class StepCheck(TimeSpan):
+    """The step estimate for a section, and how far the refit moved it (refit minus estimate)."""
 
-    step_cents: Positive | None
+    estimated_cents: Positive | None
+    drift_cents: float | None
+
+    @model_validator(mode="after")
+    def drift_needs_an_estimate(self) -> Self:
+        if self.estimated_cents is None and self.drift_cents is not None:
+            raise ValueError("drift needs an estimate to drift from")
+        return self
+
+
+class RoundTripReport(Contract):
+    steps: tuple[StepCheck, ...]
     phrases: tuple[PhraseCheck, ...]
 
 
 class ReviewRecord(Contract):
     """One cantor fix; caused_by is filled in once it is traced to a node."""
 
+    format_version: FormatVersion
     fingerprint: NonEmpty
     phrase_id: NonEmpty
     before: OneLine

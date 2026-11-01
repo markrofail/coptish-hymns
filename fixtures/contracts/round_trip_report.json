@@ -1,5 +1,12 @@
 {
-  "step_cents": 180.0,
+  "steps": [
+    {
+      "start_s": 0.0,
+      "end_s": 11.0,
+      "estimated_cents": 180.0,
+      "drift_cents": 4.0
+    }
+  ],
   "phrases": [
     {
       "phrase_id": "p1",

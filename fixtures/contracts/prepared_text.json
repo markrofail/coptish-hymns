@@ -41,6 +41,7 @@
   "lines": [
     {
       "index": 0,
+      "verse_index": 0,
       "text": "ⲁⲗⲏ",
       "first_syllable": 0,
       "last_syllable": 1,
@@ -48,6 +49,7 @@
     },
     {
       "index": 1,
+      "verse_index": 0,
       "text": "ⲗⲟⲩⲓⲁ",
       "first_syllable": 2,
       "last_syllable": 4,

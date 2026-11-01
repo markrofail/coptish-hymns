@@ -26,6 +26,7 @@ class Syllable(Contract):
 
 class Line(Contract):
     index: Index
+    verse_index: Index
     text: Nfc
     first_syllable: Index
     last_syllable: Index
@@ -57,6 +58,9 @@ class PreparedText(Contract):
         ]
         if covered != [syllable.index for syllable in self.syllables]:
             raise ValueError("lines must cover every syllable once, in order")
+        verses = [line.verse_index for line in self.lines]
+        if verses != sorted(verses):
+            raise ValueError("verses must be in order")
         return self
 
 

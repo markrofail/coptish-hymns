@@ -58,8 +58,12 @@ BROKEN = [
     ("HymnText", "no text", ["text"], "   "),
     ("HymnText", "unknown tradition", ["tradition"], "sahidic"),
     ("Recording", "no path", ["path"], ""),
+    ("SeparationInput", "unknown backend", ["backend"], "spleeter"),
     ("Voice", "no length", ["duration_s"], 0),
     ("Voice", "no sample rate", ["sample_rate_hz"], 0),
+    ("Voice", "unknown backend", ["backend"], "spleeter"),
+    ("Voice", "bypass with an accompaniment", ["accompaniment_path"], "work/demo/other.flac"),
+    ("Voice", "separated with no accompaniment", ["backend"], "roformer"),
     ("PreparedText", "syllables out of order", ["syllables", 1, "index"], 2),
     ("PreparedText", "text not NFC", ["syllables", 0, "text"], unicodedata.normalize("NFD", "ϊ")),
     ("PreparedText", "lines leave a gap", ["lines", 0, "last_syllable"], 0),
@@ -68,6 +72,7 @@ BROKEN = [
     ("PreparedText", "lines stop short", ["lines", 1, "last_syllable"], 3),
     ("PreparedText", "repeat of a later line", ["lines", 0, "repeat_of"], 1),
     ("PreparedText", "repeat of itself", ["lines", 1, "repeat_of"], 1),
+    ("PreparedText", "verses go backwards", ["lines", 0, "verse_index"], 1),
     ("PreparedText", "no fingerprint", ["fingerprint"], ""),
     ("Sounds", "syllables out of order", ["syllables", 1, "syllable_index"], 4),
     ("Sounds", "no romanised form", ["syllables", 0, "romanised"], ""),
@@ -81,6 +86,9 @@ BROKEN = [
     ("PulseUnit", "no sections", ["sections"], []),
     ("PulseUnit", "zero unit", ["sections", 0, "half_note_s"], 0),
     ("PulseUnit", "section ends before it starts", ["sections", 0, "end_s"], 0.0),
+    ("StepSize", "no sections", ["sections"], []),
+    ("StepSize", "zero step", ["sections", 0, "step_cents"], 0),
+    ("StepSize", "confidence above one", ["sections", 0, "confidence"], 1.5),
     ("SyllableTimes", "ends before it starts", ["syllables", 0, "end_s"], 0.0),
     ("SyllableTimes", "syllables out of order", ["syllables", 1, "syllable_index"], 4),
     ("SyllableTimes", "start goes back in time", ["syllables", 1, "start_s"], 0.5),
@@ -99,8 +107,10 @@ BROKEN = [
     ("RoundTripReport", "passed with errors", ["phrases", 0, "errors"], ["syllable 3 missing"]),
     ("RoundTripReport", "failed with no error", ["phrases", 0, "passed"], False),
     ("RoundTripReport", "negative pitch error", ["phrases", 0, "pitch_error_cents"], -1.0),
-    ("ReviewRecord", "a fix that changes nothing", ["after"], "1 ↑ 2"),
+    ("RoundTripReport", "drift with no estimate", ["steps", 0, "estimated_cents"], None),
+    ("ReviewRecord", "a fix that changes nothing", ["after"], "1 ^ 2"),
     ("ReviewRecord", "no phrase", ["phrase_id"], ""),
+    ("ReviewRecord", "unknown format version", ["format_version"], 2),
     ("LibraryEntry", "another hymn's fix", ["corrections", 0, "fingerprint"], "other"),
     ("RenderedPage", "no page", ["html_path"], ""),
 ]
@@ -127,12 +137,52 @@ def test_repeated_phrase_ids_are_rejected():
         contracts.HymnString.model_validate(payload)
 
 
-def test_overlapping_pulse_sections_are_rejected():
-    payload = example("PulseUnit")
-    payload["sections"].append({"start_s": 5.0, "end_s": 12.0, "half_note_s": 0.4, "confidence": 0.9})
+@pytest.mark.parametrize(
+    "name, section",
+    [
+        ("PulseUnit", {"start_s": 5.0, "end_s": 12.0, "half_note_s": 0.4, "confidence": 0.9}),
+        ("StepSize", {"start_s": 5.0, "end_s": 12.0, "step_cents": 150.0, "confidence": 0.9}),
+    ],
+    ids=["PulseUnit", "StepSize"],
+)
+def test_overlapping_sections_are_rejected(name, section):
+    payload = example(name)
+    payload["sections"].append(section)
 
     with pytest.raises(ValidationError):
-        contracts.PulseUnit.model_validate(payload)
+        SCHEMAS[name].model_validate(payload)
+
+
+def test_separation_is_bypassed_unless_a_backend_is_chosen():
+    separation = contracts.SeparationInput.model_validate({"recording": {"path": "hymn.flac"}})
+
+    assert separation.backend == "bypass"
+
+
+def test_a_separated_voice_keeps_its_accompaniment():
+    payload = example("Voice") | {"backend": "demucs", "accompaniment_path": "work/demo/other.flac"}
+
+    voice = contracts.Voice.model_validate(payload)
+
+    assert voice.accompaniment_path == "work/demo/other.flac"
+
+
+def test_a_section_with_no_stable_intervals_has_no_step():
+    payload = example("StepSize")
+    payload["sections"][0]["step_cents"] = None
+
+    step = contracts.StepSize.model_validate(payload)
+
+    assert step.sections[0].step_cents is None
+
+
+def test_a_section_with_no_estimate_has_no_drift():
+    payload = example("RoundTripReport")
+    payload["steps"][0] |= {"estimated_cents": None, "drift_cents": None}
+
+    report = contracts.RoundTripReport.model_validate(payload)
+
+    assert report.steps[0].drift_cents is None
 
 
 def test_failed_phrase_keeps_its_errors():

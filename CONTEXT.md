@@ -31,13 +31,14 @@ One continuous line per phrase, read in the text's direction, with the lyrics un
 | Stack, bottom to top | The string runs left to right (mirrored for Arabic) |
 | Mark length | Length along the string, in half-note units |
 | Each separate mark (a new note) | A bead at the start of each note, including a re-sung note on the same level |
-| ↑ ↓ arrows | A smooth slope up or down one level |
-| ↝ abrupt move | A sharp corner: a vertical jump with no slope |
+| ↑ ↓ arrows | A smooth slope up or down: one level per hazzat arrow, or n levels when the audio measures a clearly larger leap (for example, at least 1.5 steps) |
+| ↝ abrupt move | A sharp corner: a vertical jump with no slope, whatever the size. A wide leap alone is never drawn as a corner. |
 | ~ vibrating note | A wavy stretch |
 | . pause | A dotted, silent stretch, with a breath mark above it |
 | → sing fast | A thin dashed stretch, with the lyric underlined |
 | ( )×3 repeat | Written out in full under a bracket labelled ×3, with ↗ or ↘ if each repeat rises or falls |
-| [ ]① reference | The same colour and a ① label at every occurrence |
+| [ ]① reference | The same colour and a ① label at every occurrence: the same shape at the same starting level |
+| No hazzat sign | The same shape at another level: the motif's colour, with the shift in its label, such as ①+1. This is an extension hazzat can't express. |
 | Vowel in ( ) | A vowel label such as (a) under the string where the vowel carries on |
 | Red and gray letters | The same colours in the lyric line |
 | Text direction | The drawing's direction; mirrored for Arabic |
@@ -68,6 +69,8 @@ An invented phrase, not a real hymn line, that uses every rule at least once. `r
 | 9 |  | Abrupt move down, then motif ① again | 1, 2, 1 | 2, 1, 1 |
 | 10 |  | Step down to a held note; vowel label (a) under the melisma | 0 | 4 |
 
+The lengths in this table are authoritative, and the renderer draws them strictly proportional. The SVG is only a style reference: its spacing is not proportional (half notes span 11 to 14 px, full notes 25 to 31 px).
+
 Look used in the demo (a starting point, not a spec): 3 px stroke with round joins; motif notes purple (#7F77DD), other notes teal (#1D9E75); beads are 3 px radius dots; levels 20 px apart; a full note about 25 px long; pauses dotted in gray.
 
 ## 4. The agent graph (approved)
@@ -76,40 +79,65 @@ Dotted edges carry information from the text.
 
 ```mermaid
 flowchart TD
-  R["Recording: one cantor, one hymn"] --> SEP["Separation · audio model<br/>isolate the voice"]
+  R["Recording: one cantor, one hymn"] --> SEP["Separation · audio model, bypassed by default<br/>isolate the voice"]
   T["Coptic text: Unicode, plus tradition"] --> TP["Text prep · code<br/>syllables, abbreviations"]
   TP --> PR["Pronunciation · LLM agent<br/>sung sounds per syllable"]
   SEP --> PC["Pitch contour · audio model<br/>slopes, vibrato"]
-  SEP --> PU["Pulse unit · code<br/>half-note size"]
+  SEP --> PU["Pulse unit · code<br/>half-note size per section"]
   SEP --> ON["Note onsets · audio model<br/>beads, breaths"]
   SEP --> LA["Lyric aligner · audio model<br/>syllable times"]
   PR -.->|"sung sounds"| LA
   LA -.->|"syllable windows"| ON
+  PC --> ON
+  TP -.->|"verse boundaries"| PU
+  LA --> PU
+  ON --> PU
+  PC --> ST["Step size · code<br/>level size per section"]
+  ON --> ST
+  PU --> ST
   PC --> PM["Pattern miner · code<br/>repeats, known motifs"]
   PU --> PM
   ON --> PM
   LA --> PM
   TP -.->|"repeated lines"| PM
   TP -.->|"hymn identity"| HL[("Hymn library<br/>past strings")]
+  HL --> PM
   PM --> HI["Hazzat interpreter · LLM agent<br/>sees plots, writes string"]
   HL --> HI
+  PC --> HI
+  PU --> HI
+  ST --> HI
+  ON --> HI
+  LA --> HI
+  TP -.->|"text"| HI
+  PR -.->|"sung sounds"| HI
   HI --> RT["Round-trip check · code<br/>pitch and syllables match"]
   TP -.->|"syllable order"| RT
+  PC --> RT
+  PU --> RT
+  ST --> RT
+  LA --> RT
   RT -->|"fail: re-judge, max 3 tries"| HI
-  RT --> RE["Render · code<br/>string view, synced audio"]
+  HI -->|"string"| RE["Render · code<br/>string view, synced audio"]
+  RT -->|"report"| RE
+  LA -.->|"syllable times"| RE
+  R -.->|"for the player"| RE
   RE --> CR(["Cantor review · person<br/>fixes become examples"])
   CR -.->|"fixes saved"| HL
 ```
 
 What each node is for:
 
-- **Text prep**: normalises the Unicode, covers both letter blocks, expands overlined abbreviations, adds the vowel a jinkim implies, splits syllables, marks Greek words and finds repeated lines.
+- **Separation**: one node with three backends chosen by a setting: `bypass` (the default for now), `demucs` and `roformer`. Version 1 skips separation; when bypassed, pitch and pulse run on the full mix. A separation backend also keeps the accompaniment, for cymbal hits.
+- **Text prep**: normalises the Unicode, covers both letter blocks, expands overlined abbreviations, adds the vowel a jinkim implies, splits syllables, marks Greek words and finds repeated lines and verse boundaries.
 - **Pronunciation**: for each syllable, the sounds sung in the chosen tradition, a romanised form for the aligner, and flags for letters likely silent (gray) or added (red).
 - **Lyric aligner**: forced alignment of known syllables, not speech recognition. A catch-all token absorbs audio that isn't in the text, such as repeated words or an extra "Allelouia". It gives a confidence per syllable.
 - **Note onsets**: works inside each syllable window, so it only has to find the notes within each vowel.
+- **Pulse unit**: measures the half-note size per section. It defaults to one section per hymn, split at verse boundaries from text prep or at long pauses.
+- **Step size**: measures how big one level is, once per section, from the intervals between adjacent stable notes. The interpreter and round-trip check both use it.
 - **Pattern miner**: repeated text, such as a refrain or verses sung to one tune, is a strong hint that the melody repeats.
 - **Hazzat interpreter**: makes the cantor-like calls (a wobble or three short notes? a true repeat or a near match? which formulas get a motif tag?) and writes the string. It sees a plot of the pitch line per syllable, not raw audio.
-- **Round-trip check**: redraws the string as a pitch line and compares it with the recording, and checks every syllable appears once, in order. A failing section goes back to the interpreter with the error.
+- **Round-trip check**: redraws the string as a pitch line and compares it with the recording, and checks every syllable appears once, in order. It refits the step size and reports any drift from the estimate. A failing section goes back to the interpreter with the error.
 - **Cantor review**: each fix becomes a worked example stored in the hymn library for that hymn.
 
 ## 5. Coptic text handling
@@ -127,7 +155,7 @@ Sources: https://en.wikipedia.org/wiki/Coptic_script and https://en.wikipedia.or
 
 | Node | Choice | Notes |
 | --- | --- | --- |
-| Separation | `audio-separator` with a BS-RoFormer or MelBand RoFormer vocals model | Supports CoreML and MPS acceleration on Apple Silicon; needs ffmpeg. https://pypi.org/project/audio-separator/ |
+| Separation | `bypass` in version 1. When needed: `audio-separator` 0.24.1 with a RoFormer vocals model, then Demucs 4.1.0, then another machine with cached stems | The owner's Intel Mac caps PyTorch at 2.2.2. 0.24.1 is the last `audio-separator` without a PyTorch 2.3 floor, and it is untested on 2.2.2. Demucs 4.1.0 allows PyTorch 2.1 to 2.2 on Intel Macs. Needs ffmpeg. https://pypi.org/project/audio-separator/ |
 | Pitch contour | RMVPE | Built for vocal pitch and robust to noise; an ONNX port runs with onnxruntime at 10 ms frames: https://huggingface.co/Scicom-intl/rmvpe-onnx. Lighter fallbacks: CREPE, pYIN (librosa). |
 | Pulse unit | Own code, plus Beat This! for cymbal hits | https://pypi.org/project/beat-this/ |
 | Lyric aligner | `ctc-forced-aligner` (based on Meta's MMS; 1,100+ languages via romanisation) | https://github.com/MahmoudAshraf97/ctc-forced-aligner. Weights are CC-BY-NC 4.0, non-commercial. torchaudio's own forced-alignment API was removed in torchaudio 2.9, so don't build on it. |

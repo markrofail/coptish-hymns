@@ -5,6 +5,7 @@ from hymnstring.contracts.audio import (
     PitchTrack,
     PulseUnit,
     Recording,
+    StepSize,
     SyllableTimes,
     Voice,
 )
@@ -14,8 +15,11 @@ from hymnstring.contracts.inputs import (
     InterpreterInput,
     MinerInput,
     OnsetsInput,
+    PulseInput,
     RenderInput,
     RoundTripInput,
+    SeparationInput,
+    StepInput,
 )
 from hymnstring.contracts.judgement import (
     HymnString,
@@ -41,6 +45,7 @@ __all__ = [
     "Patterns",
     "PitchTrack",
     "PreparedText",
+    "PulseInput",
     "PulseUnit",
     "Recording",
     "RenderInput",
@@ -48,7 +53,10 @@ __all__ = [
     "ReviewRecord",
     "RoundTripInput",
     "RoundTripReport",
+    "SeparationInput",
     "Sounds",
+    "StepInput",
+    "StepSize",
     "SyllableTimes",
     "Voice",
 ]
