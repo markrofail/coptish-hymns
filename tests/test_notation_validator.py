@@ -47,6 +47,18 @@ CASES = [
         "p1 ltr: #1[2 ^ 1]\np2 ltr: v 1\np3 ltr: 2\np4 ltr: 5 ^ 4 #1[2 ^ 1]",
         [],
     ),
+    ("motif in a rising repeat of three", "p1 ltr: (#1[1 ^ 1])x3^", [("motif_level", "p1")]),
+    ("motif deep in a rising repeat", "p1 ltr: ((#1[1])x2 ^ 1)x3^", [("motif_level", "p1")]),
+    (
+        "p4 chains from p3, which broke the chain",
+        "p1 ltr: #1[2 ^ 1]\np2 ltr: v 1\np3 ltr: #1[2 ^ 1] ^ 1\np4 ltr: v2 #1[2 ^ 1]",
+        [],
+    ),
+    (
+        "p4 chains from p3, wrong join",
+        "p1 ltr: #1[2 ^ 1]\np2 ltr: v 1\np3 ltr: #1[2 ^ 1] ^ 1\np4 ltr: v #1[2 ^ 1]",
+        [("motif_level", "p4")],
+    ),
     ("join on the first phrase", "p1 ltr: ^ 1", [("first_join", "p1")]),
     ("pause first", "p1 ltr: .2 1", [("phrase_start", "p1")]),
     ("ends on a move", "p1 ltr: 1 ^", [("phrase_end", "p1")]),
@@ -62,7 +74,6 @@ CASES = [
     ("motif starts on a move", "p1 ltr: #1[^ 1]", [("bracket_edge", "p1")]),
     ("motif ends on a move", "p1 ltr: #1[1 ^]", [("bracket_edge", "p1")]),
     ("move before a bracket that starts on a pause", "p1 ltr: 1 ^ (.2 1)x2", [("bracket_edge", "p1")]),
-    ("two moves in a fast group", "p1 ltr: >2{* ^ ^ *}", [("move_follower", "p1")]),
     ("problems come in phrase order", "p1 ltr: 1 ^\np2 ltr: 1 ^ ^ 1", [("phrase_end", "p1"), ("move_follower", "p2")]),
 ]
 

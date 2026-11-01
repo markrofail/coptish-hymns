@@ -345,6 +345,11 @@ class _Parser:
         self.pos += 1
         if not any(isinstance(i, Bead) for i in found):
             raise self.fail("a fast group needs at least one '*'")
+        # beads with at most one move between neighbours, and none at either end
+        if isinstance(found[0], Move) or isinstance(found[-1], Move):
+            raise self.fail("a fast group must start and end with a '*'")
+        if any(isinstance(a, Move) and isinstance(b, Move) for a, b in zip(found, found[1:])):
+            raise self.fail("a fast group allows at most one move between two notes")
         return Fast(length, tuple(found))
 
     def vowel_bead(self) -> Bead | None:

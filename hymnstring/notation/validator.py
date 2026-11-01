@@ -4,11 +4,10 @@ The parser already refuses unknown tokens, sizes below 1 and a misplaced `=`. Wh
 structure (where moves and pauses may sit) and motifs (shape, then level within a chain).
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 from hymnstring.notation.flatten import flatten
 from hymnstring.notation.model import (
-    Fast,
     Hymn,
     Item,
     Motif,
@@ -63,8 +62,6 @@ def _items(items: tuple[Item, ...], add) -> None:
             add("move_follower", "a move cannot be followed by another move or a pause")
     for item in items:
         match item:
-            case Fast():
-                _items(item.items, add)
             case Repeat():
                 if item.count < 2:
                     add("repeat_count", "a repeat needs a count of at least 2")
@@ -99,7 +96,10 @@ def _motifs(hymn: Hymn) -> list[tuple[int, Problem]]:
             start = 0
         else:
             start = end_level + (phrase.join.change if isinstance(phrase.join, Move) else 0)
-        flat = flatten(phrase.items, start)
+        items, hits = _without_rising_motifs(phrase.items)
+        for _ in range(hits):
+            found.append((index, Problem("motif_level", phrase.phrase_id, "a motif cannot sit in a repeat that changes level")))
+        flat = flatten(items, start)
         end_level = flat.end_level
         for use in flat.motifs:
 
@@ -120,3 +120,35 @@ def _motifs(hymn: Hymn) -> list[tuple[int, Problem]]:
             if use.start_level - use.shift != wanted:
                 add("motif_level", "starts on a level that does not fit the others in its chain")
     return found
+
+
+def _without_rising_motifs(items: tuple[Item, ...]) -> tuple[tuple[Item, ...], int]:
+    """Items with the motif labels taken off any level-changing repeat's body, and how many
+    such repeats held a motif. Each is one defect, whatever its count, and its copies would
+    otherwise each be reported."""
+    kept: list[Item] = []
+    hits = 0
+    for item in items:
+        if isinstance(item, Repeat) and item.step != 0:
+            body = _unlabelled(item.items)
+            hits += body != item.items
+            item = replace(item, items=body)
+        elif isinstance(item, Repeat | Motif):
+            body, inner = _without_rising_motifs(item.items)
+            hits += inner
+            item = replace(item, items=body)
+        kept.append(item)
+    return tuple(kept), hits
+
+
+def _unlabelled(items: tuple[Item, ...]) -> tuple[Item, ...]:
+    """The same items with every motif bracket removed."""
+    kept: list[Item] = []
+    for item in items:
+        if isinstance(item, Motif):
+            kept += _unlabelled(item.items)
+        elif isinstance(item, Repeat):
+            kept.append(replace(item, items=_unlabelled(item.items)))
+        else:
+            kept.append(item)
+    return tuple(kept)

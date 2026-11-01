@@ -87,6 +87,8 @@ PARSES = [
     ("p1 ltr: (^ 1)x2", line([Repeat((Move(False, 1), Note(1)), 2)])),
     ("p1 ltr: ((1)x2 ^ 1)x3", line([Repeat((Repeat((Note(1),), 2), Move(False, 1), Note(1)), 3)])),
     ("p1 ltr: >1{i:*}", line([Fast(1, (Bead(syl("i")),))])),
+    ("p1 ltr: >1{* ! *}", line([Fast(1, (Bead(), Move(True, 0), Bead()))])),
+    ("p1 ltr: >1{* *}", line([Fast(1, (Bead(), Bead()))])),
     (
         "p1 ltr: >2{ⲧⲓ:* ^ * !v2 (a):*}",
         line([Fast(2, (Bead(syl("ⲧⲓ")), Move(False, 1), Bead(), Move(True, -2), Bead(Vowel("a"))))]),
@@ -270,6 +272,11 @@ REJECTS = [
     "p1 ltr: >1{#1[1]}",
     "p1 ltr: >1{>1{*}}",
     "p1 ltr: >1{a:2}",
+    # a fast group is bead (move? bead)*
+    "p1 ltr: >1{^ *}",
+    "p1 ltr: >1{* ^}",
+    "p1 ltr: >1{* ^ ^ *}",
+    "p1 ltr: >1{^}",
     "p1 ltr: >{*}",
     # lyrics
     "p1 ltr: é:2",
