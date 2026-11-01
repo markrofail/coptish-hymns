@@ -104,6 +104,10 @@ def test_every_input_of_a_node_is_drawn(target):
     assert undrawn == set()
 
 
+def test_the_diagram_is_read_in_full():
+    assert len(drawn_edges()) >= 45
+
+
 def test_graph_is_acyclic_apart_from_its_two_feedback_loops():
     retry = ("RT", "HI")
     cantors_fixes = ("CR", "HL")

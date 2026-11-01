@@ -84,6 +84,19 @@ def test_output_that_breaks_the_contract_is_caught(bad_output):
         run_node(node, {"text": "ⲁ"})
 
 
+def test_an_input_file_that_cannot_be_read_stops_the_node(tmp_path, capsys):
+    unreadable = tmp_path / "bad.json"
+    unreadable.write_bytes(b"\xff\xfe{}")
+    node = Node("same", Word, Word, lambda given: given)
+
+    for source in (tmp_path / "missing.json", unreadable):
+        assert cli(node, ["--in", str(source)]) == 2
+
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert captured.err.count("same") == 2
+
+
 def test_coptic_stays_readable_in_the_output_file(tmp_path):
     source = tmp_path / "in.json"
     target = tmp_path / "out.json"

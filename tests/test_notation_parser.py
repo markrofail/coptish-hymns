@@ -21,6 +21,7 @@ from hymnstring.notation import (
     Vowel,
     parse_hymn,
     parse_line,
+    validate,
     write_hymn,
     write_line,
 )
@@ -59,6 +60,19 @@ def test_the_harvest_finds_the_examples():
 
 @pytest.mark.parametrize("text", spec_examples() + [spec_demo()])
 def test_canonical_text_survives_parse_then_write(text):
+    assert write_line(parse_line(text)) == text
+
+
+@pytest.mark.parametrize("text", spec_examples())
+def test_every_spec_example_is_valid(text):
+    # the join and p2 examples are read after a first phrase
+    hymn = text if text.startswith("p1 ") else "p1 ltr: 2\n" + text
+
+    assert validate(parse_hymn(hymn)) == []
+
+
+@pytest.mark.parametrize("text", ["p1 ltr: ~1", "p1 ltr: .1"])
+def test_half_length_vibratos_and_pauses_survive_parse_then_write(text):
     assert write_line(parse_line(text)) == text
 
 
@@ -360,6 +374,9 @@ def test_arbitrary_input_never_raises_anything_but_notation_error():
     for _ in range(3000):
         text = "p1 ltr: " + "".join(rng.choice(pieces) for _ in range(rng.randint(1, 14)))
         try:
-            parse_hymn(text)
+            hymn = parse_hymn(text)
         except NotationError:
-            pass
+            continue
+        written = write_hymn(hymn)
+        assert parse_hymn(written) == hymn
+        validate(hymn)

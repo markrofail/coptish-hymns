@@ -50,7 +50,11 @@ def cli(node: Node, argv: list[str] | None = None) -> int:
     parser.add_argument("--out", dest="target", type=Path, help="default: stdout")
     args = parser.parse_args(argv)
 
-    raw = args.source.read_text(encoding="utf-8") if args.source else sys.stdin.read()
+    try:
+        raw = args.source.read_text(encoding="utf-8") if args.source else sys.stdin.read()
+    except (OSError, UnicodeDecodeError) as error:
+        print(f"{node.name}: cannot read input: {error}", file=sys.stderr)
+        return 2
     try:
         output = run_node(node, json.loads(raw))
     except json.JSONDecodeError as error:
