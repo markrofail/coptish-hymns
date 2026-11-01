@@ -1,6 +1,6 @@
 import pytest
 
-from hymnstring.notation import parse_hymn
+from hymnstring.notation import parse_hymn, parse_line, validate_phrase
 from hymnstring.notation.validator import validate
 
 DEMO = (
@@ -74,6 +74,21 @@ CASES = [
     ("motif starts on a move", "p1 ltr: #1[^ 1]", [("bracket_edge", "p1")]),
     ("motif ends on a move", "p1 ltr: #1[1 ^]", [("bracket_edge", "p1")]),
     ("move before a bracket that starts on a pause", "p1 ltr: 1 ^ (.2 1)x2", [("bracket_edge", "p1")]),
+    (
+        "a motif in a same-level repeat is one defect, not one per copy",
+        "p1 ltr: #1[2 ^ 1] (#1[2 ^ 1])x5",
+        [("motif_level", "p1")],
+    ),
+    (
+        "a motif of another shape in a same-level repeat is one defect",
+        "p1 ltr: #1[2 ^ 1] v (#1[2 ^ 2])x5",
+        [("motif_shape", "p1")],
+    ),
+    (
+        "shifted motifs must agree with each other when no plain one is in the chain",
+        "p1 ltr: #1[2]\np2 ltr: #1+1[2] #1+2[2]",
+        [("motif_level", "p2")],
+    ),
     ("problems come in phrase order", "p1 ltr: 1 ^\np2 ltr: 1 ^ ^ 1", [("phrase_end", "p1"), ("move_follower", "p2")]),
 ]
 
@@ -83,3 +98,25 @@ def test_validate(text, expected):
     problems = validate(parse_hymn(text))
 
     assert [(problem.rule, problem.phrase_id) for problem in problems] == expected
+
+
+# phrase-local rules only, so a phrase that is not first can be checked alone
+@pytest.mark.parametrize(
+    "text, expected",
+    [
+        ("v 1", []),
+        ("= 1", []),
+        ("#1+1[1]", []),
+        ("1 ^", ["phrase_end"]),
+        ("(1)x1", ["repeat_count"]),
+        ("1 ^ ^ 1", ["move_follower"]),
+        (".2 1", ["phrase_start"]),
+        ("(^ 1)x2", ["bracket_edge"]),
+        ("#1[^ 1]", ["bracket_edge"]),
+        ("(#1[1])x2^", ["motif_level"]),
+    ],
+)
+def test_validate_phrase(text, expected):
+    problems = validate_phrase(parse_line("p1 ltr: " + text))
+
+    assert [problem.rule for problem in problems] == expected

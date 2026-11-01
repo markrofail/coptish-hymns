@@ -17,7 +17,7 @@ from hymnstring.notation.model import (
     Vowel,
 )
 from hymnstring.notation.parser import NotationError, parse_hymn, parse_line
-from hymnstring.notation.validator import Problem, validate
+from hymnstring.notation.validator import Problem, validate, validate_phrase
 from hymnstring.notation.writer import write_hymn, write_line
 
 __all__ = [
@@ -40,6 +40,7 @@ __all__ = [
     "parse_hymn",
     "parse_line",
     "validate",
+    "validate_phrase",
     "write_hymn",
     "write_line",
 ]

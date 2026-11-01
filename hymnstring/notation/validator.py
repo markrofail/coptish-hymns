@@ -29,23 +29,37 @@ def validate(hymn: Hymn) -> list[Problem]:
     """Problems in phrase order, one per defect. Empty when the hymn is valid."""
     found: list[tuple[int, Problem]] = []
     for index, phrase in enumerate(hymn.phrases):
-        found += [(index, problem) for problem in _structure(phrase, index)]
+        if index == 0 and phrase.join is not None:
+            found.append((index, Problem("first_join", phrase.phrase_id, "the first phrase of a hymn cannot have a join")))
+        found += [(index, problem) for problem in validate_phrase(phrase)]
     found += _motifs(hymn)
     found.sort(key=lambda pair: pair[0])  # stable: structure before motifs within a phrase
     return [problem for _, problem in found]
 
 
+def validate_phrase(phrase: Phrase) -> list[Problem]:
+    """The problems a phrase has on its own: its structure, and a motif in a level-changing
+    repeat. What needs the rest of the hymn is left out: a join on the first phrase, and how
+    motifs compare with each other."""
+    found = _structure(phrase)
+    _, hits = _without_rising_motifs(phrase.items)
+    found += [_rising_problem(phrase)] * hits
+    return found
+
+
+def _rising_problem(phrase: Phrase) -> Problem:
+    return Problem("motif_level", phrase.phrase_id, "a motif cannot sit in a repeat that changes level")
+
+
 # -- structure
 
 
-def _structure(phrase: Phrase, index: int) -> list[Problem]:
+def _structure(phrase: Phrase) -> list[Problem]:
     found: list[Problem] = []
 
     def add(rule: str, message: str) -> None:
         found.append(Problem(rule, phrase.phrase_id, message))
 
-    if index == 0 and phrase.join is not None:
-        add("first_join", "the first phrase of a hymn cannot have a join")
     first, last = phrase.items[0], phrase.items[-1]
     if isinstance(first, Pause | Move):
         add("phrase_start", "a phrase must start on a note, after any join")
@@ -96,9 +110,7 @@ def _motifs(hymn: Hymn) -> list[tuple[int, Problem]]:
             start = 0
         else:
             start = end_level + (phrase.join.change if isinstance(phrase.join, Move) else 0)
-        items, hits = _without_rising_motifs(phrase.items)
-        for _ in range(hits):
-            found.append((index, Problem("motif_level", phrase.phrase_id, "a motif cannot sit in a repeat that changes level")))
+        items, _ = _without_rising_motifs(phrase.items)  # those are validate_phrase's problems
         flat = flatten(items, start)
         end_level = flat.end_level
         for use in flat.motifs:
@@ -122,10 +134,12 @@ def _motifs(hymn: Hymn) -> list[tuple[int, Problem]]:
     return found
 
 
-def _without_rising_motifs(items: tuple[Item, ...]) -> tuple[tuple[Item, ...], int]:
+def _without_rising_motifs(items: tuple[Item, ...], in_motif: bool = False) -> tuple[tuple[Item, ...], int]:
     """Items with the motif labels taken off any level-changing repeat's body, and how many
     such repeats held a motif. Each is one defect, whatever its count, and its copies would
-    otherwise each be reported."""
+    otherwise each be reported. A same-level repeat is cut to one copy for the same reason:
+    its copies start on one level, so they repeat the first copy's motif problems. Inside a motif
+    the copies stay, because they are part of the motif's shape."""
     kept: list[Item] = []
     hits = 0
     for item in items:
@@ -134,9 +148,11 @@ def _without_rising_motifs(items: tuple[Item, ...]) -> tuple[tuple[Item, ...], i
             hits += body != item.items
             item = replace(item, items=body)
         elif isinstance(item, Repeat | Motif):
-            body, inner = _without_rising_motifs(item.items)
+            body, inner = _without_rising_motifs(item.items, in_motif or isinstance(item, Motif))
             hits += inner
             item = replace(item, items=body)
+            if isinstance(item, Repeat) and not in_motif:
+                item = replace(item, count=1)  # same-level copies all start on one level
         kept.append(item)
     return tuple(kept), hits
 

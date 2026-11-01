@@ -115,7 +115,7 @@ The first occurrence of a motif in a hymn must be plain, because that occurrence
 
 ### Strict motifs
 
-Within a chain, all plain occurrences of a motif must start on the same level, and an occurrence `#1+n` must start `n` levels from the plain occurrences in that chain, if there are any. "Same shape" is compared after expanding repeats, so `#1[(1)x3 ^ 2]` and `#1[1 1 1 ^ 2]` have the same shape. A motif inside a level-changing repeat occurs at a new level in each copy, so a motif there is invalid: every motif is checked strictly within its chain.
+Within a chain, all plain occurrences of a motif must start on the same level, and an occurrence `#1+n` must start `n` levels from the plain occurrences in that chain. If the chain has no plain occurrence, the shifted ones are compared with each other instead: `#1+1` and `#1+2` must start one level apart. So `#1+1[2] #1+2[2]` in a chain of its own is invalid, because both start on the same level. "Same shape" is compared after expanding repeats, so `#1[(1)x3 ^ 2]` and `#1[1 1 1 ^ 2]` have the same shape. A motif inside a level-changing repeat occurs at a new level in each copy, so a motif there is invalid: every motif is checked strictly within its chain.
 
 ### Extensions
 
@@ -187,7 +187,7 @@ The validator rejects a string when:
 5. A repeat or motif body starts with a pause or a move, or ends on a move. Moves into and out of a bracket sit outside it.
 6. A fast group holds anything but `*` notes and moves, or a `*` appears outside one.
 7. Two occurrences of a motif differ in shape, anywhere in the hymn, after expanding repeats.
-8. Within a chain, a plain motif starts on a different level from another plain occurrence, or a shifted one isn't that many levels from the plain ones in that chain.
+8. Within a chain, a plain motif starts on a different level from another plain occurrence, or a shifted one isn't that many levels from the plain ones in that chain, or, with no plain one in the chain, from the other shifted ones.
 9. A shifted motif comes before the motif's first plain occurrence in the hymn, or has a shift of 0. A `[...]` copy has no earlier occurrence of its label, or has a shift.
 10. A motif sits inside a repeat that changes level (`^` or `v`).
 11. A lyric isn't NFC, or contains anything but letters, combining marks and the letter marks above.
