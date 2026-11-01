@@ -44,7 +44,7 @@ class NotationError(ValueError):
 
 def parse_line(line: str) -> Phrase:
     """One phrase alone. A `[...]` copy resolves only against this line."""
-    return _parse_phrase(line, {})
+    return _parse_phrase(line, {}, {})
 
 
 def parse_hymn(text: str) -> Hymn:
@@ -53,17 +53,18 @@ def parse_hymn(text: str) -> Hymn:
     if lines and lines[-1] == "" and len(lines) > 1:
         lines.pop()  # one final newline ends the last line
     seen: dict[int, Motif] = {}
+    known: dict[int, int] = {}
     phrases = []
     for number, line in enumerate(lines, start=1):
         try:
-            phrases.append(_parse_phrase(line, seen))
+            phrases.append(_parse_phrase(line, seen, known))
         except NotationError as error:
             raise NotationError(f"line {number}: {error}") from None
     return Hymn(tuple(phrases))
 
 
-def _parse_phrase(line: str, seen: dict[int, Motif]) -> Phrase:
-    parser = _Parser(line, seen)
+def _parse_phrase(line: str, seen: dict[int, Motif], known: dict[int, int]) -> Phrase:
+    parser = _Parser(line, seen, known)
     return parser.phrase()
 
 
@@ -71,8 +72,11 @@ def _is_letter(char: str) -> bool:
     return unicodedata.category(char)[0] in "LM"
 
 
-def _events(items: tuple[Item, ...]) -> int:
-    """Notes and pauses once repeats are expanded, counted without expanding them."""
+def _events(items: tuple[Item, ...], known: dict[int, int]) -> int:
+    """Notes and pauses once repeats are expanded, counted without expanding them.
+
+    Stops as soon as the total passes the cap, and takes a registered motif's count from
+    `known` (keyed by id), so a motif that copies motifs is not walked copy by copy."""
     total = 0
     for item in items:
         match item:
@@ -81,37 +85,40 @@ def _events(items: tuple[Item, ...]) -> int:
             case Fast():
                 total += sum(isinstance(i, Bead) for i in item.items)
             case Repeat():
-                total += item.count * _events(item.items)
+                total += item.count * _events(item.items, known)
             case Motif():
-                total += _events(item.items)
+                total += known[id(item)] if id(item) in known else _events(item.items, known)
+        if total > MAX_EVENTS:
+            break
     return total
 
 
-def _strip(items: tuple[Item, ...]) -> tuple[Item, ...]:
-    """The same shape with every lyric removed."""
-    return tuple(_strip_one(item) for item in items)
+def _strip(items: tuple[Item, ...], known: dict[int, int]) -> tuple[Item, ...]:
+    """The same shape with every lyric removed. A registered motif has none, so it is reused."""
+    return tuple(_strip_one(item, known) for item in items)
 
 
-def _strip_one(item: Item | Bead) -> Item | Bead:
+def _strip_one(item: Item | Bead, known: dict[int, int]) -> Item | Bead:
     match item:
         case Note():
             return Note(item.length, item.vibrato)
         case Bead():
             return Bead()
         case Fast():
-            return Fast(item.length, tuple(_strip_one(i) for i in item.items))
+            return Fast(item.length, tuple(_strip_one(i, known) for i in item.items))
         case Repeat():
-            return Repeat(_strip(item.items), item.count, item.step)
+            return Repeat(_strip(item.items, known), item.count, item.step)
         case Motif():
-            return Motif(item.label, item.shift, _strip(item.items))
+            return item if id(item) in known else Motif(item.label, item.shift, _strip(item.items, known))
     return item
 
 
 class _Parser:
-    def __init__(self, text: str, seen: dict[int, Motif]):
+    def __init__(self, text: str, seen: dict[int, Motif], known: dict[int, int]):
         self.text = text
         self.pos = 0
         self.seen = seen  # first occurrence of each motif label, lyrics removed
+        self.known = known  # id of each such motif to its event count; seen keeps them alive
         self.depth = 0
 
     # -- helpers
@@ -183,7 +190,7 @@ class _Parser:
             join, items = items[0], items[1:]
         if not items:
             raise self.fail("a phrase needs at least one item after its join")
-        if _events(items) > MAX_EVENTS:
+        if _events(items, self.known) > MAX_EVENTS:
             raise self.fail(f"a phrase can expand to at most {MAX_EVENTS} notes and pauses", 0)
         return Phrase(header.group(1), header.group(2), join, items)
 
@@ -419,9 +426,14 @@ class _Parser:
         if not body:
             raise self.fail("a motif needs at least one item", open_at)
         self.pos += 1
-        found = Motif(label, shift, body)
-        self.seen.setdefault(label, Motif(label, 0, _strip(body)))
-        return found
+        events = _events(body, self.known)
+        if events > MAX_EVENTS:
+            raise self.fail(f"a motif can expand to at most {MAX_EVENTS} notes and pauses", open_at)
+        if label not in self.seen:
+            first = Motif(label, 0, _strip(body, self.known))
+            self.seen[label] = first
+            self.known[id(first)] = events
+        return Motif(label, shift, body)
 
     def copy(self) -> Motif:
         if not self.text.startswith("[...]", self.pos):

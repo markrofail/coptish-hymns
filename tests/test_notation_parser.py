@@ -1,5 +1,7 @@
 import random
 import re
+import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -368,15 +370,64 @@ def test_jinkim_and_both_coptic_blocks_are_letters():
     assert write_line(parse_line(f"p1 ltr: {jinkim}:2 (ⲁ):1")) == f"p1 ltr: {jinkim}:2 (ⲁ):1"
 
 
+def doubling_line(depth):
+    """#1 is one note, and each later motif is two copies of the one before: 2**(depth-1) notes."""
+    motifs = [f"#{k}[[...]#{k - 1} [...]#{k - 1}]" for k in range(2, depth + 1)]
+    return "p1 ltr: " + " ".join(["#1[1]", *motifs])
+
+
+def parse_in_a_subprocess(text):
+    """The outcome of parse_hymn, run apart so a hang fails the test instead of the suite."""
+    code = (
+        "import sys\n"
+        "from hymnstring.notation import NotationError, parse_hymn\n"
+        "try:\n"
+        "    hymn = parse_hymn(sys.argv[1])\n"
+        "except NotationError:\n"
+        "    print('NotationError')\n"
+        "else:\n"
+        "    print('parsed', len(hymn.phrases))\n"
+    )
+    done = subprocess.run(
+        [sys.executable, "-c", code, text],
+        capture_output=True,
+        text=True,
+        timeout=20,
+        cwd=SPEC.parents[2],
+    )
+    assert done.returncode == 0, done.stderr
+    return done.stdout.strip()
+
+
+def test_motifs_that_copy_motifs_end_in_notation_error_quickly():
+    assert parse_in_a_subprocess(doubling_line(40)) == "NotationError"
+
+
+def test_motifs_that_copy_motifs_still_parse_within_the_cap():
+    assert parse_in_a_subprocess(doubling_line(10)) == "parsed 1"
+
+
+FRAGMENTS = [
+    "1", "2", "~2", ".2", "^", "v2", "!", "!v", "(1)x2", "(1 ^ 1)x3^", "#1[1]", "#1[2 ^ 1]",
+    ">2{* ^ *}", "ⲁ:2", "(ⲁ):2", "[...]#1", "#1+1[1]", "=", "(1)x2v",
+]
+NOISE = list("12^v!=.~*(){}[]#+-x:<>a ①↑↝→•×↗") + ["[...]", "#1[", ")x2", ">1{", "lou:", "\n"]
+
+
 def test_arbitrary_input_never_raises_anything_but_notation_error():
     rng = random.Random(7)
-    pieces = list("12^v!=.~*(){}[]#+-x:<>a ①↑↝→•×↗") + ["[...]", "#1[", ")x2", ">1{", "lou:", "\n"]
+    parsed = 0
     for _ in range(3000):
-        text = "p1 ltr: " + "".join(rng.choice(pieces) for _ in range(rng.randint(1, 14)))
+        if rng.random() < 0.8:  # mostly valid fragments, joined by spaces, with some noise
+            parts = [rng.choice(FRAGMENTS if rng.random() < 0.9 else NOISE) for _ in range(rng.randint(1, 8))]
+            body = " ".join(parts)
+        else:
+            body = "".join(rng.choice(NOISE) for _ in range(rng.randint(1, 14)))
         try:
-            hymn = parse_hymn(text)
+            hymn = parse_hymn("p1 ltr: " + body)
         except NotationError:
             continue
-        written = write_hymn(hymn)
-        assert parse_hymn(written) == hymn
+        parsed += 1
+        assert parse_hymn(write_hymn(hymn)) == hymn
         validate(hymn)
+    assert parsed >= 500
