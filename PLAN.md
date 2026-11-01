@@ -4,6 +4,7 @@
 > In this plan, "I" and "my workspace" mean the Claude that drafted it, in a cloud workspace; "you" is the repo owner.
 > On the owner's Mac, read "Where each part runs" as: use the "On your computer" column.
 > The build-order diagram is redrawn below as Mermaid.
+> Edited here after export with the owner's Phase 0 decisions, so it now differs from that doc.
 
 ## Goal and approach
 
@@ -25,7 +26,7 @@ Synthetic audio made from known strings gives exact answers for testing. That le
 flowchart TD
   P0["Phase 0 · foundations<br/>test harness, data contracts, string format, renderer, synthesiser"]
   P1["Phase 1 · text side<br/>text prep, pronunciation, hymn library<br/>(needs no audio)"]
-  P2["Phase 2 · audio side<br/>separation, pitch, pulse, aligner, onsets<br/>(synthetic audio first, then a real excerpt)"]
+  P2["Phase 2 · audio side<br/>separation bypass, pitch, aligner, onsets, pulse, step size<br/>(synthetic audio first, then a real excerpt)"]
   P3["Phase 3 · judgement and checking<br/>round-trip check first, then pattern miner,<br/>interpreter, player and review page"]
   subgraph P4["Phase 4 · integration slices"]
     A["A · text only<br/>text to page"] --> B["B · synthetic<br/>known answers"] --> C["C · real audio<br/>cantor reviews"] --> D["D · feedback<br/>fixes saved, reused"]
@@ -45,9 +46,9 @@ Phase 0 builds what every later part depends on: the data contracts, the string 
 
 1. **Test harness.** A Python package with one folder per node, a command-line runner and pytest. Done when: an empty node runs end to end through the harness.
 2. **Data contracts.** Typed schemas for what each node passes on: syllables, sounds, pitch track, pulse unit, note starts, syllable times, patterns, the string itself and review records. Done when: each schema has an example file and a validation test.
-3. **String format.** A text form of the string notation, with a parser, a writer and a validator; each hazzat rule maps to one token type. Done when: every rule has an example that survives parse-then-write unchanged, and you have approved the format.
-4. **Renderer.** Draws a string as the string view we designed, with a mirrored layout for Arabic. Done when: the demo phrase from our chat renders from its text form, locked by snapshot tests.
-5. **Synthesiser.** Turns a string into a vowel-like sung tone, with settings for tempo, step size, vibrato, noise, room echo and cymbals. It also writes the true pitch track, note starts, syllable times and pulse unit. Done when: those true values match the string exactly for 50 random strings.
+3. **String format.** A text form of the string notation, with a parser, a writer and a validator; each hazzat rule maps to one token type. The canonical text is ASCII, hazzat signs are accepted as input aliases, and the writer always outputs the canonical form. Done when: every rule has a canonical example that survives parse-then-write unchanged, one test shows hazzat-sign input normalises to the canonical form, and you have approved the format.
+4. **Renderer.** Draws a string as the string view we designed, in hazzat signs, with a mirrored layout for Arabic. Lengths are strictly proportional; the SVG is only a style reference. Done when: the demo phrase from our chat renders from its text form, locked by snapshot tests.
+5. **Synthesiser.** Turns a string into a vowel-like sung tone, with settings for tempo, step size, vibrato, noise, room echo and cymbals. It also writes the true pitch track, note starts, syllable times, pulse unit and step size. Done when: those true values match the string exactly for 50 random strings.
 
 The synthesiser is the key test tool: it gives every audio part exact answers long before real recordings are labelled. Real recordings still decide the final quality, from Phase 2 on.
 
@@ -61,22 +62,23 @@ Phase 1 builds the text branch, which needs no audio and can run alongside Phase
 
 ## Phase 2: audio side
 
-Phase 2 builds the five audio parts in data order; each is tested first on synthetic audio, then on one hand-labelled real excerpt.
+Phase 2 builds the six audio parts in data order; each is tested first on synthetic audio, then on one hand-labelled real excerpt.
 
-1. **Separation (audio model).** A RoFormer vocal model through `audio-separator`, with a bypass for clean solo recordings. Tested with: synthetic voice mixed with cymbals and room echo. Done when: pitch error after separation stays within 10 cents of the clean voice.
+1. **Separation (audio model, skipped in version 1).** One node with three backends chosen by a setting: `bypass` (the default for now), `demucs` and `roformer`. Version 1 builds only the bypass; pitch and pulse then run on the full mix. When separation is needed, try `audio-separator` 0.24.1 on PyTorch 2.2.2 first. If it fails, use Demucs 4.1.0. As a last resort, separate on another machine and cache the stems. Tested with: synthetic voice mixed with cymbals and room echo. Done when: the bypass passes the full mix through unchanged, and any separation backend keeps pitch error within 10 cents of the clean voice.
 2. **Pitch contour (audio model).** RMVPE on your computer, CREPE or pYIN in my workspace, giving pitch every 10 ms with a confidence. A vibrato detector reports rate and width. Tested with: synthetic steps, glides and vibrato at several speeds and noise levels. Done when: median error is under 20 cents, and at least 90% of planted vibratos are found with under 5% false alarms.
-3. **Pulse unit (code).** Estimates the half-note length from note durations, or from cymbal hits with Beat This! when cymbals are present. Tested with: synthetic hymns at known tempos with up to 15% timing wobble. Done when: within 10% of the true unit in 95% of cases.
-4. **Lyric aligner (audio model).** The MMS forced aligner on your computer, with a catch-all token for audio not in the text; in my workspace, a fallback splits the audio by the known syllable count. It outputs each syllable's start, end and confidence. Tested with: 2 minutes of a real recording, with syllable starts tapped by hand on a page I build. Done when: median start error is at most 100 ms, and 90% of syllables land within 250 ms.
-5. **Note onsets (audio model).** Inside each syllable, finds new notes from pitch changes and from re-sung notes on the same pitch, plus breaths. Tested with: synthetic audio with planted same-pitch repeats and breaths, then 30 seconds of hand-tapped real notes. Done when: F1 is at least 0.9 within 50 ms on synthetic audio.
+3. **Lyric aligner (audio model).** The MMS forced aligner on your computer, with a catch-all token for audio not in the text; in my workspace, a fallback splits the audio by the known syllable count. It outputs each syllable's start, end and confidence. Tested with: 2 minutes of a real recording, with syllable starts tapped by hand on a page I build. Done when: median start error is at most 100 ms, and 90% of syllables land within 250 ms.
+4. **Note onsets (audio model).** Inside each syllable, finds new notes from pitch changes and from re-sung notes on the same pitch, plus breaths. Tested with: synthetic audio with planted same-pitch repeats and breaths, then 30 seconds of hand-tapped real notes. Done when: F1 is at least 0.9 within 50 ms on synthetic audio.
+5. **Pulse unit (code).** Estimates the half-note length per section from note durations, or from cymbal hits with Beat This! when cymbals are present. It defaults to one section per hymn, split at verse boundaries from text prep or at long pauses. Tested with: synthetic hymns at known tempos with up to 15% timing wobble. Done when: within 10% of the true unit in 95% of cases.
+6. **Step size (code).** Estimates how big one level is, once per section, from the intervals between adjacent stable notes, and passes it to the interpreter and the round-trip check. Tested with: synthetic hymns at known step sizes with noise and drift. Done when: within 10% of the true step in 95% of sections.
 
 ## Phase 3: judgement and checking
 
 Phase 3 turns measurements into notation and checks the result. The round-trip check comes first, because it grades the interpreter.
 
-1. **Round-trip check (code).** Redraws a string as a pitch line, using the measured step size and pulse unit, and compares it with the recording. It also confirms every syllable appears once, in order. Tested with: correct strings, plus copies with planted faults such as a wrong step, a missing note or a swapped syllable. Done when: every planted fault fails and no correct string does.
+1. **Round-trip check (code).** Redraws a string as a pitch line, using the estimated step size and the pulse unit, and compares it with the recording. It refits the step size and reports any drift from the estimate. It also confirms every syllable appears once, in order. Tested with: correct strings, plus copies with planted faults such as a wrong step, a missing note or a swapped syllable. Done when: every planted fault fails and no correct string does.
 2. **Pattern miner (code).** Finds exact and near repeats, including rising and falling ones, seeded by repeated text lines and known motifs in the hymn library. Tested with: synthetic hymns with planted repeats and look-alike distractors. Done when: at least 95% of planted patterns are found, and at least 95% of reported patterns are real.
-3. **Hazzat interpreter (LLM).** Works one phrase at a time from a pitch plot per syllable, note candidates, the pulse unit, pattern candidates, the text and its sounds, and past strings from the library. It writes that phrase's string, which the parser must accept; a failed round-trip sends it back with the error, up to 3 times. Done when, on synthetic hymns: every output parses, at least 90% of tokens are correct, and at least 95% of phrases pass within 3 tries.
-4. **Player and review page.** Shows the string synced to the recording, lets a cantor fix a phrase, and saves the fix to the hymn library. Done when: a fix made on the page appears in the next run's library lookup.
+3. **Hazzat interpreter (LLM).** Works one phrase at a time from a pitch plot per syllable, note candidates, the pulse unit, the step size, pattern candidates, the text and its sounds, and past strings from the library. It writes that phrase's string, which the parser must accept; a failed round-trip sends it back with the error, up to 3 times. It writes a move of more than one level only when the measured leap is clearly bigger than the section's step (for example, at least 1.5 steps), and an abrupt move only when the move is truly abrupt. Done when, on synthetic hymns: every output parses, at least 90% of tokens are correct, and at least 95% of phrases pass within 3 tries.
+4. **Player and review page.** Shows the string in hazzat signs, synced to the recording, lets a cantor fix a phrase, and saves the fix to the hymn library in the canonical text. Done when: a fix made on the page appears in the next run's library lookup.
 
 ## Phase 4: integration slices
 
@@ -84,7 +86,7 @@ Integration happens in four slices, each a runnable end-to-end chain that grows 
 
 1. **Slice A, text only.** Coptic text goes through text prep and pronunciation, under a hand-written string, to the renderer. It can start as soon as Phase 1 passes. Done when: one real hymn renders with correct syllables under its string.
 2. **Slice B, synthetic audio.** The synthesiser makes audio from a known string, and the chain runs from pitch through the interpreter to the renderer. Syllable times come from the synthesiser at first, then from the aligner. Done when: output strings match input strings on 20 synthetic hymns, with at least 90% of tokens correct.
-3. **Slice C, your recording.** Adds separation and the real aligner, runs on your recording, and the cantor reviews the result. Done when: every phrase passes the round-trip check or is flagged, and each correction is traced to the node that caused it.
+3. **Slice C, your recording.** Adds the real aligner, with separation still bypassed, runs on your recording, and the cantor reviews the result. Done when: every phrase passes the round-trip check or is flagged, and each correction is traced to the node that caused it.
 4. **Slice D, feedback loop.** Fixes from the review page go into the hymn library, and a second run uses them. Done when: a second run of the same hymn needs fewer corrections than the first.
 
 After Slice D, the work widens to more hymns and cantors, with a short note kept of which recordings work well and which do not.
@@ -108,7 +110,7 @@ Everything can be built and tested in my workspace except the stronger models, w
 
 | Part | In my workspace | On your computer |
 | --- | --- | --- |
-| Separation | Bypass only, unless its models download from GitHub (checked in Phase 2) | RoFormer vocal model |
+| Separation | Bypass only, unless its models download from GitHub (checked in Phase 2) | Bypass by default; `demucs` or `roformer` by setting |
 | Pitch contour | CREPE or pYIN | RMVPE |
 | Lyric aligner | Fallback that splits by syllable count | MMS forced aligner |
 | Pronunciation and interpreter agents | Stored LLM answers | Live calls with your Claude API key |
@@ -138,7 +140,8 @@ The biggest risk is aligning syllables inside long melismas, so the plan tests i
 | Vibrato and quick repeated notes look alike | Wrong beads on the string | Interpreter sees plots, round-trip check, cantor rules saved to the library |
 | Synthetic audio is too clean | Parts pass tests but fail on real voices | Noise, echo and drift in the synthesiser; real excerpts in every evaluation set |
 | Cantors pronounce differently | Aligner confidence drops | Tradition set per cantor; low-confidence syllables flagged |
-| Church acoustics: echo, cymbals, congregation | Noisy pitch track | Separation, recording guidance, a note of which recordings work |
+| Church acoustics: echo, cymbals, congregation | Noisy pitch track | Recording guidance, a note of which recordings work, and a separation backend when needed |
+| Intel Mac caps PyTorch at 2.2.2 | Some model packages won't install | ONNX routes where they exist, separation bypassed in version 1, and the fallback order in Phase 2 |
 | LLM answers drift | Same input gives different strings | Pinned model, stored answers, schema checks, regression runs |
 | Strong models blocked in my workspace | Full quality testable only on your computer | Fallbacks here, same code path on your computer |
 | Aligner licence is non-commercial | Blocks any paid use | Swap the aligner before charging for anything |

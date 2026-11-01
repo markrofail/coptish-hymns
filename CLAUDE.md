@@ -19,9 +19,11 @@ The design was made in a Claude chat you can't see. Read CONTEXT.md (design deci
 
 ## This Mac versus the plan
 
-- PLAN.md was drafted by a Claude working in a cloud workspace where Hugging Face was blocked. Here it isn't, so use the "On your computer" column of "Where each part runs": RMVPE, the MMS aligner and RoFormer separation. Keep the lighter fallbacks only as optional alternatives behind one config setting.
+- PLAN.md was drafted by a Claude working in a cloud workspace where Hugging Face was blocked. Here it isn't, so use the "On your computer" column of "Where each part runs": RMVPE and the MMS aligner. Keep the lighter fallbacks only as optional alternatives behind one config setting.
 - In PLAN.md, "I" is the Claude that drafted it and "you" is me, the owner of this repo.
-- Apple Silicon: use PyTorch's MPS device where it works, with a CPU fallback; `audio-separator` can use CoreML and MPS. Install ffmpeg with Homebrew.
+- This Mac is an Intel i7-9750H, not Apple Silicon: PyTorch is capped at 2.2.2, and there is no MPS or CoreML, so everything runs on CPU. Prefer ONNX routes. Install ffmpeg with Homebrew.
+- Version 1 skips separation. It is one node with three backends chosen by a setting: `bypass` (the default for now), `demucs` and `roformer`. When bypassed, pitch and pulse run on the full mix.
+- When separation is needed, try `audio-separator` 0.24.1 on PyTorch 2.2.2 first. If it fails, use Demucs 4.1.0. As a last resort, separate on another machine and cache the stems.
 - Use Python 3.11 or later in a virtual environment, with pinned dependencies.
 - Keep model weights in a cache outside the repo. Never commit audio, weights or API keys, and keep test fixtures small.
 - The two agents read `ANTHROPIC_API_KEY` from the environment, and the model name lives in one config value.
