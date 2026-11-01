@@ -1,5 +1,6 @@
-"""String notation: the model, and the parser and writer for its text form."""
+"""String notation: the model, the parser and writer for its text form, `flatten`, and the validator."""
 
+from hymnstring.notation.flatten import Flat, FlatEvent, FlatNote, FlatPause, MotifUse, flatten
 from hymnstring.notation.model import (
     Bead,
     Fast,
@@ -23,10 +24,15 @@ from hymnstring.notation.writer import write_hymn, write_line
 __all__ = [
     "Bead",
     "Fast",
+    "Flat",
+    "FlatEvent",
+    "FlatNote",
+    "FlatPause",
     "Hymn",
     "Item",
     "Letters",
     "Motif",
+    "MotifUse",
     "Move",
     "NotationError",
     "Note",
@@ -37,6 +43,7 @@ __all__ = [
     "SameLevel",
     "Syllable",
     "Vowel",
+    "flatten",
     "parse_hymn",
     "parse_line",
     "validate",

@@ -75,7 +75,7 @@ Phase 2 builds the six audio parts in data order; each is tested first on synthe
 
 Phase 3 turns measurements into notation and checks the result. The round-trip check comes first, because it grades the interpreter.
 
-1. **Round-trip check (code).** Redraws a string as a pitch line, using the estimated step size and the pulse unit, and compares it with the recording. It refits the step size and reports any drift from the estimate. It also confirms every syllable appears once, in order. Tested with: correct strings, plus copies with planted faults such as a wrong step, a missing note or a swapped syllable. Done when: every planted fault fails and no correct string does.
+1. **Round-trip check (code).** Redraws a string as a pitch line, using the estimated step size and the pulse unit, and compares it with the recording. It refits the step size and reports any drift from the estimate. It also confirms every syllable appears once, in order. Across chains the text has no shared level, so it also compares each motif's measured pitch there. Tested with: correct strings, plus copies with planted faults such as a wrong step, a missing note, a swapped syllable or a motif repeated at the wrong level across chains. Done when: every planted fault fails and no correct string does.
 2. **Pattern miner (code).** Finds exact and near repeats, including rising and falling ones, seeded by repeated text lines and known motifs in the hymn library. Tested with: synthetic hymns with planted repeats and look-alike distractors. Done when: at least 95% of planted patterns are found, and at least 95% of reported patterns are real.
 3. **Hazzat interpreter (LLM).** Works one phrase at a time from a pitch plot per syllable, note candidates, the pulse unit, the step size, pattern candidates, the text and its sounds, and past strings from the library. It writes that phrase's string, which the parser must accept; a failed round-trip sends it back with the error, up to 3 times. It writes a move of more than one level only when the measured leap is clearly bigger than the section's step (for example, at least 1.5 steps), and an abrupt move only when the move is truly abrupt. Done when, on synthetic hymns: every output parses, at least 90% of tokens are correct, and at least 95% of phrases pass within 3 tries.
 4. **Player and review page.** Shows the string in hazzat signs, synced to the recording, lets a cantor fix a phrase, and saves the fix to the hymn library in the canonical text. Done when: a fix made on the page appears in the next run's library lookup.
@@ -122,7 +122,7 @@ Your computer needs Python and ffmpeg; a GPU speeds up separation but is not req
 
 Phase 0 needs only one review from you; the first real input is hymn texts for Phase 1.
 
-- [ ] Phase 0: approve the string format once I draft it.
+- [x] Phase 0: approve the string format once I draft it.
 - [ ] Phase 1: 3 to 5 hymn texts in Unicode Coptic, and whether your cantor uses Greco-Bohairic or Old Bohairic.
 - [ ] Phase 1: a cantor's check of about 200 word pronunciations, from a list I prepare.
 - [ ] Phase 2: one recording of a short hymn by a single cantor, with its text.

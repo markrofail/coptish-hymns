@@ -147,3 +147,11 @@ def test_the_shape_includes_pauses_and_ignores_lyrics():
         (None, "pause", Fraction(2)),
         (Move(False, 1), "note", Fraction(3)),
     )
+
+
+def test_flatten_and_its_types_are_exported_from_the_package():
+    import hymnstring.notation as notation
+
+    for name in ("flatten", "Flat", "FlatNote", "FlatPause", "FlatEvent", "MotifUse"):
+        assert name in notation.__all__
+        assert hasattr(notation, name)
