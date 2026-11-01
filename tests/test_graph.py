@@ -1,6 +1,7 @@
 """The graph drawn in CONTEXT.md section 4, checked against what nodes declare."""
 
 import importlib
+import graphlib
 import re
 import subprocess
 import sys
@@ -101,6 +102,19 @@ def test_every_input_of_a_node_is_drawn(target):
     }
 
     assert undrawn == set()
+
+
+def test_graph_is_acyclic_apart_from_its_two_feedback_loops():
+    retry = ("RT", "HI")
+    cantors_fixes = ("CR", "HL")
+    edges = drawn_edges()
+    assert {retry, cantors_fixes} <= edges
+
+    forward = graphlib.TopologicalSorter()
+    for source, target in edges - {retry, cantors_fixes}:
+        forward.add(target, source)
+
+    forward.prepare()
 
 
 def test_library_keeps_the_fixes_from_cantor_review():

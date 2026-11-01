@@ -1,10 +1,13 @@
 """The text side: the hymn as given, its syllables and their sung sounds."""
 
-from typing import Literal, Self
+from typing import Annotated, Literal, Self
 
 from pydantic import Field, model_validator
 
 from hymnstring.contracts.base import Contract, Index, Nfc, NonEmpty, require_counting_up
+
+# The alphabet of torchaudio's MMS_FA aligner: lowercase a-z and the apostrophe.
+Romanised = Annotated[str, Field(pattern=r"^[a-z']+$")]
 
 Tradition = Literal["greco_bohairic", "old_bohairic"]
 
@@ -74,7 +77,7 @@ class LetterFlag(Contract):
 class SyllableSound(Contract):
     syllable_index: Index
     sounds: tuple[NonEmpty, ...] = Field(min_length=1)
-    romanised: NonEmpty
+    romanised: Romanised
     silent: tuple[LetterFlag, ...]
     added: tuple[LetterFlag, ...]
 

@@ -76,6 +76,9 @@ BROKEN = [
     ("PreparedText", "no fingerprint", ["fingerprint"], ""),
     ("Sounds", "syllables out of order", ["syllables", 1, "syllable_index"], 4),
     ("Sounds", "no romanised form", ["syllables", 0, "romanised"], ""),
+    ("Sounds", "romanised with a macron", ["syllables", 0, "romanised"], "lē"),
+    ("Sounds", "romanised with a capital", ["syllables", 0, "romanised"], "A"),
+    ("Sounds", "romanised with a space", ["syllables", 0, "romanised"], "a b"),
     ("Sounds", "a syllable with no sounds", ["syllables", 0, "sounds"], []),
     ("Sounds", "flag before the syllable", ["syllables", 0, "added"], [{"position": -1, "letter": "ⲉ"}]),
     ("PitchTrack", "frames disagree", ["confidence"], [1.0]),
@@ -127,6 +130,15 @@ def test_broken_payload_is_rejected(name, path, value):
 
     with pytest.raises(ValidationError):
         SCHEMAS[name].model_validate(payload)
+
+
+def test_romanised_form_accepts_an_apostrophe():
+    payload = example("Sounds")
+    payload["syllables"][0]["romanised"] = "l'e"
+
+    sounds = contracts.Sounds.model_validate(payload)
+
+    assert sounds.syllables[0].romanised == "l'e"
 
 
 def test_repeated_phrase_ids_are_rejected():

@@ -28,6 +28,8 @@ class AlignerInput(Contract):
 
 
 class OnsetsInput(Contract):
+    """Must not take the pulse unit: pulse runs after onsets, so that would make a cycle."""
+
     voice: Voice
     pitch_track: PitchTrack
     syllable_times: SyllableTimes
