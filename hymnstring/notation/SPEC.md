@@ -36,7 +36,7 @@ A move has no length of its own. It happens at the end of the stretch before it,
 | Same-level join | `=` | none | Only as a phrase's join (see Phrase joins): the same level as the previous phrase's last note |
 | Repeat | `(…)x3` `(…)x3^` `(…)x3v` `(…)x3^2` | `(…)×3` `(…)×3↗` `(…)×3↘` `(…)×3↗2` | A bracket over one written copy, repeated 3 times in all: each copy on the same level, or a level higher or lower than the one before (2 levels in the last form) |
 | Motif | `#1[…]` | `①[…]` | A labelled set: the same shape at the same starting level. The label holds across the whole hymn. |
-| Motif copy | `[...]#1` | `[...]①` | Repeat the first `#1` exactly, with no lyrics. The three dots are written as they are. See Motif copies. |
+| Motif copy | `#1[…]` | `[...]①` | Input only: the first `#1` is repeated exactly, with no lyrics, and is written back as a full `#1[…]`. `[...]#1` is accepted too. See Motif copies. |
 | Shifted motif | `#1+1[…]` `#1-2[…]` | `①+1[…]` `①-2[…]` | **Extension.** The same shape, that many levels above or below the motif. |
 | Syllable | `lou:1` | `lou:1` | Before a note: a new syllable starts on this note |
 | Vowel label | `(a):2` | `(a):2` | Before a note: show (a) here, with no new syllable |
@@ -105,6 +105,8 @@ p3 ltr: #1[2 ^ 1] 4
 
 A later `[...]#1` with no notes inside, whose label comes after the bracket, copies the first occurrence's shape without its lyrics. The three dots are written as they are. `[...]①` is the hazzat form. It is resolved when the hymn is parsed, across phrases, and the writer outputs the full canonical occurrence, such as `#1[2 ^ 1 v 1]`. It is a plain occurrence, so it starts on the same level as the other plain ones. With no earlier occurrence of the label it is an error. There is no shifted form of it.
 
+Example: `#1[2 ^ 1] v 2 [...]#1` is written back as `#1[2 ^ 1] v 2 #1[2 ^ 1]`, the second motif at the same level as the first.
+
 ### Shifted motifs: an extension
 
 **Hazzat can't express this.** Its `[...]①` means "repeat that set exactly", so a plain `#1` is strict: the same shape at the same starting level. `#1+1` is ours, for a melody that recurs a level higher or lower. It is drawn in the motif's colour with the shift in its label, such as `①+1`. A hazzat page would have to write those notes out with no reference.
@@ -125,7 +127,7 @@ Within a chain, all plain occurrences of a motif must start on the same level, a
 
 ## One example for each rule
 
-These are the rows of the table in CONTEXT.md section 2. The `p1 ltr:` prefix is left out except on the join and last rows. Coptic syllables here are invented.
+These are the rows of the table in CONTEXT.md section 2. The `p1 ltr:` prefix is left out except on the join and last rows. Coptic syllables here are invented. Every example in this table is canonical and survives parse-then-write unchanged.
 
 | Rule | Example | How it reads |
 | --- | --- | --- |
@@ -139,7 +141,6 @@ These are the rows of the table in CONTEXT.md section 2. The `p1 ltr:` prefix is
 | → sing fast | `>1{i:*} ^ >2{ⲧⲓ:* ^ ⲛⲉ:* v ⲣⲁ:*}` | One fast note, then three syllables in the space of one full note |
 | ( )×3 repeat | `(1)x3 ^ (1)x3^ (1)x3v` | Three notes on one level, a step up, then three copies each a level higher, then three each a level lower |
 | [ ]① reference | `#1[2 ^ 1] v 2 #1[ⲡⲉ:2 ^ 1]` | The same motif twice, at the same level. The second one carries a new syllable. |
-| [...]① copy | `#1[2 ^ 1] v 2 [...]#1` | The second motif copies the first, so it is `#1[2 ^ 1]` again, at the same level, with no lyrics |
 | Shifted motif (extension) | `#1[2 ^ 1] #1+1[2 ^ 1] v3 #1-1[2 ^ 1]` | The motif, then one level above it, then one level below it |
 | Vowel in ( ) | `ⲁ:2 ^ 2 v (ⲁ):4` | Reminds the singer the vowel is still (a) |
 | Red and gray letters | `ⲧ<+ⲉ>ⲛ:2 <-ϩ>ⲁ:2` | A red ⲉ in the first syllable, a gray ϩ in the second |
@@ -165,13 +166,14 @@ Each row matches the table in CONTEXT.md section 3. The text has 11 note tokens,
 
 The lowest note is row 10, so it is level 0 and the phrase starts at level 1. Both motifs start at level 1, so the second is a plain `#1`.
 
+The repeat in row 6 is one copy, `lou:1`, sung 3 times, each a level higher. The drawing's three beads come from the expansion.
+
 Real strings hold the syllables as text prep gives them, in Coptic. The demo is romanised only because the drawing is.
 
 Three details come from `reference/string_demo.svg`, which is otherwise only a style reference:
 
 - A motif starts on its first note, and the move into it sits outside the brackets. The drawing colours those moves teal, not purple.
 - A pause holds the level of the note before it, and the next move comes after the pause.
-- The repeat in row 6 is one copy, `lou:1`, sung 3 times, each a level higher. The drawing's three beads come from the expansion.
 - The (a) label sits on the first note of row 9. The table mentions it on row 10, but both are under the same melisma.
 
 ## What makes a string invalid
@@ -233,6 +235,8 @@ Input aliases. Each is read as its canonical sign while the line is read token b
 | `~` `~~` and longer runs, with no digit after | `~2` `~4`; a run of n tildes is `~{2n}`. A lyric may precede them: `lē:~`. |
 | `[...]①` | `[...]#1` |
 | `①` to `⑳` | `#1` to `#20` |
+
+The `"[...]" "#" label` form in the motif row is input only; the writer never outputs it.
 
 Parse-then-write tests use canonical text. One further test shows that input in hazzat signs normalises to the canonical form.
 
