@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "hymnstring"
+version = "0.0.0"
+description = "Turns a recording of a Coptic hymn and its text into string notation."
+requires-python = ">=3.11"
+dependencies = ["pydantic==2.14.2"]
+
+[project.optional-dependencies]
+dev = ["pytest==8.4.2"]
+
+[tool.setuptools.packages.find]
+include = ["hymnstring*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
