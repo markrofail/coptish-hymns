@@ -1,13 +1,14 @@
 """Patterns, the string itself, and what happens to it afterwards."""
 
-from typing import Literal, Self
+from typing import Annotated, Literal, Self
 
 from pydantic import Field, model_validator
 
 from hymnstring.contracts.base import Contract, NonEmpty, OneLine, Positive, Score, TimeSpan
-from hymnstring.notation import parse_hymn, parse_line, validate, write_hymn, write_line
+from hymnstring.notation import parse_hymn, parse_line, validate, validate_phrase, write_hymn, write_line
 
 FormatVersion = Literal[1]
+PhraseId = Annotated[str, Field(pattern=r"^[A-Za-z0-9_-]+$")]  # as in SPEC.md, so one id is one phrase
 
 
 class Pattern(Contract):
@@ -25,7 +26,7 @@ class Patterns(Contract):
 class PhraseString(Contract):
     """One phrase. `notation` is the canonical text form in hymnstring/notation/SPEC.md."""
 
-    phrase_id: NonEmpty
+    phrase_id: PhraseId
     direction: Literal["ltr", "rtl"]
     notation: OneLine
 
@@ -54,7 +55,7 @@ class HymnString(Contract):
 
 
 class PhraseCheck(Contract):
-    phrase_id: NonEmpty
+    phrase_id: PhraseId
     passed: bool
     pitch_error_cents: float | None = Field(ge=0)
     errors: tuple[NonEmpty, ...]
@@ -89,7 +90,7 @@ class ReviewRecord(Contract):
 
     format_version: FormatVersion
     fingerprint: NonEmpty
-    phrase_id: NonEmpty
+    phrase_id: PhraseId
     before: OneLine
     after: OneLine
     comment: str
@@ -103,11 +104,14 @@ class ReviewRecord(Contract):
         return self
 
     @model_validator(mode="after")
-    def both_sides_are_canonical(self) -> Self:
+    def both_sides_are_canonical_and_valid(self) -> Self:
         for text in (self.before, self.after):
             line = f"{self.phrase_id} ltr: {text}"
-            if write_line(parse_line(line)) != line:
+            phrase = parse_line(line)
+            if write_line(phrase) != line:
                 raise ValueError("before and after must be canonical notation")
+            if validate_phrase(phrase):
+                raise ValueError("before and after must be valid notation")
         return self
 
 

@@ -23,9 +23,9 @@ Score = Annotated[float, Field(ge=0, le=1)]
 
 
 class Contract(BaseModel):
-    """Data passed along an edge of the graph: immutable, no unknown fields."""
+    """Data passed along an edge of the graph: immutable, no unknown fields, no NaN or infinity."""
 
-    model_config = ConfigDict(extra="forbid", frozen=True)
+    model_config = ConfigDict(extra="forbid", frozen=True, allow_inf_nan=False)
 
 
 class Empty(Contract):

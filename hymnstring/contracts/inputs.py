@@ -1,5 +1,9 @@
 """Inputs for nodes with several incoming edges. A node takes one JSON document."""
 
+from typing import Self
+
+from pydantic import model_validator
+
 from hymnstring.contracts.audio import (
     NoteStarts,
     PitchTrack,
@@ -73,6 +77,12 @@ class InterpreterInput(Contract):
     library: LibraryEntry | None
     last_try: HymnString | None
     last_report: RoundTripReport | None
+
+    @model_validator(mode="after")
+    def a_try_comes_with_its_report(self) -> Self:
+        if (self.last_try is None) != (self.last_report is None):
+            raise ValueError("last_try and last_report are set together or not at all")
+        return self
 
 
 class RoundTripInput(Contract):

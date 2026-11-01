@@ -61,6 +61,11 @@ class PitchTrack(Contract):
             raise ValueError("f0_hz and confidence must have the same length")
         return self
 
+    @model_validator(mode="after")
+    def vibratos_do_not_overlap(self) -> Self:
+        require_in_time_order(self.vibrato, "vibratos")
+        return self
+
 
 class PulseSection(TimeSpan):
     half_note_s: Positive
@@ -134,4 +139,11 @@ class NoteStarts(Contract):
         for earlier, later in zip(self.notes, self.notes[1:]):
             if later.start_s <= earlier.start_s:
                 raise ValueError("notes must be in time order")
+            if later.syllable_index < earlier.syllable_index:
+                raise ValueError("notes must not go back to an earlier syllable")
+        return self
+
+    @model_validator(mode="after")
+    def breaths_do_not_overlap(self) -> Self:
+        require_in_time_order(self.breaths, "breaths")
         return self

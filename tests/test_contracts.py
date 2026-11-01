@@ -85,9 +85,20 @@ BROKEN = [
     ("PitchTrack", "zero pitch instead of null", ["f0_hz", 0], 0),
     ("PitchTrack", "confidence above one", ["confidence", 0], 1.5),
     ("PitchTrack", "no hop", ["hop_s"], 0),
+    ("PitchTrack", "infinite pitch", ["f0_hz", 1], float("inf")),
+    (
+        "PitchTrack",
+        "vibratos overlap",
+        ["vibrato"],
+        [
+            {"start_s": 2.0, "end_s": 3.0, "rate_hz": 5.5, "width_cents": 60.0},
+            {"start_s": 2.5, "end_s": 3.5, "rate_hz": 5.5, "width_cents": 60.0},
+        ],
+    ),
     ("PitchTrack", "vibrato ends before it starts", ["vibrato", 0, "end_s"], 0.0),
     ("PulseUnit", "no sections", ["sections"], []),
     ("PulseUnit", "zero unit", ["sections", 0, "half_note_s"], 0),
+    ("PulseUnit", "infinite unit", ["sections", 0, "half_note_s"], float("inf")),
     ("PulseUnit", "section ends before it starts", ["sections", 0, "end_s"], 0.0),
     ("StepSize", "no sections", ["sections"], []),
     ("StepSize", "zero step", ["sections", 0, "step_cents"], 0),
@@ -98,6 +109,13 @@ BROKEN = [
     ("SyllableTimes", "confidence below zero", ["syllables", 0, "confidence"], -0.1),
     ("NoteStarts", "notes go back in time", ["notes", 1, "start_s"], 0.0),
     ("NoteStarts", "note before the recording", ["notes", 0, "start_s"], -1.0),
+    ("NoteStarts", "syllable index goes back", ["notes", 4, "syllable_index"], 0),
+    (
+        "NoteStarts",
+        "breaths overlap",
+        ["breaths"],
+        [{"start_s": 3.0, "end_s": 4.0}, {"start_s": 3.5, "end_s": 4.5}],
+    ),
     ("NoteStarts", "unknown cause", ["notes", 0, "cause"], "semitone"),
     ("NoteStarts", "breath ends before it starts", ["breaths", 0, "end_s"], 3.0),
     ("Patterns", "a single occurrence", ["patterns", 0, "occurrences"], [{"start_s": 0.0, "end_s": 2.0}]),
@@ -110,15 +128,26 @@ BROKEN = [
     ("HymnString", "alias signs in the notation", ["phrases", 0, "notation"], "1 ↑ 2"),
     ("HymnString", "notation that does not parse", ["phrases", 0, "notation"], "1 ^^ 2 ("),
     ("HymnString", "notation with a structural problem", ["phrases", 0, "notation"], "1 ^"),
+    ("HymnString", "phrase id that smuggles a second phrase", ["phrases", 0, "phrase_id"], "a ltr: 1\nb"),
+    ("HymnString", "phrase id with a space", ["phrases", 0, "phrase_id"], "p 1"),
     ("RoundTripReport", "passed with errors", ["phrases", 0, "errors"], ["syllable 3 missing"]),
     ("RoundTripReport", "failed with no error", ["phrases", 0, "passed"], False),
     ("RoundTripReport", "negative pitch error", ["phrases", 0, "pitch_error_cents"], -1.0),
+    ("RoundTripReport", "drift is not a number", ["steps", 0, "drift_cents"], float("nan")),
+    ("RoundTripReport", "drift is infinite", ["steps", 0, "drift_cents"], float("inf")),
+    ("RoundTripReport", "phrase id with a space", ["phrases", 0, "phrase_id"], "p 1"),
     ("RoundTripReport", "drift with no estimate", ["steps", 0, "estimated_cents"], None),
     ("ReviewRecord", "a fix that changes nothing", ["after"], "1 ^ 2"),
     ("ReviewRecord", "after is not canonical", ["after"], "2 ↑ 2"),
+    ("ReviewRecord", "after ends on a move", ["after"], "1 ^"),
+    ("ReviewRecord", "after repeats once", ["after"], "(1)x1"),
+    ("ReviewRecord", "before has two moves in a row", ["before"], "1 ^ ^ 1"),
+    ("ReviewRecord", "phrase id with a space", ["phrase_id"], "p 1"),
     ("ReviewRecord", "before does not parse", ["before"], "2 ^^"),
     ("ReviewRecord", "no phrase", ["phrase_id"], ""),
     ("ReviewRecord", "unknown format version", ["format_version"], 2),
+    ("InterpreterInput", "a last try with no report", ["last_report"], None),
+    ("InterpreterInput", "a last report with no try", ["last_try"], None),
     ("LibraryEntry", "another hymn's fix", ["corrections", 0, "fingerprint"], "other"),
     ("RenderedPage", "no page", ["html_path"], ""),
 ]
@@ -227,3 +256,29 @@ def test_letters_from_both_coptic_blocks_and_a_jinkim_are_accepted():
     text = contracts.PreparedText.model_validate(payload)
 
     assert text.syllables[0].text == "ⲛ̀ϣ"
+
+
+def test_a_last_try_and_its_report_may_come_together():
+    payload = example("InterpreterInput")
+    payload["last_try"] = example("HymnString")
+    payload["last_report"] = example("RoundTripReport")
+
+    given = contracts.InterpreterInput.model_validate(payload)
+
+    assert given.last_try is not None and given.last_report is not None
+
+
+def test_a_first_try_has_neither():
+    payload = example("InterpreterInput") | {"last_try": None, "last_report": None}
+
+    given = contracts.InterpreterInput.model_validate(payload)
+
+    assert given.last_try is None and given.last_report is None
+
+
+def test_a_fix_may_start_with_a_join_or_a_shifted_motif():
+    payload = example("ReviewRecord") | {"before": "= 1", "after": "#1+1[1]"}
+
+    fix = contracts.ReviewRecord.model_validate(payload)
+
+    assert fix.after == "#1+1[1]"
