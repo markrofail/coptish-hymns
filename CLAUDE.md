@@ -24,7 +24,7 @@ The design was made in a Claude chat you can't see. Read CONTEXT.md (design deci
 - This Mac is an Intel i7-9750H, not Apple Silicon: PyTorch is capped at 2.2.2, and there is no MPS or CoreML, so everything runs on CPU. Prefer ONNX routes. Install ffmpeg with Homebrew.
 - Version 1 skips separation. It is one node with three backends chosen by a setting: `bypass` (the default for now), `demucs` and `roformer`. When bypassed, pitch and pulse run on the full mix.
 - When separation is needed, try `audio-separator` 0.24.1 on PyTorch 2.2.2 first. If it fails, use Demucs 4.1.0. As a last resort, separate on another machine and cache the stems.
-- Use Python 3.11 or later in a virtual environment, with pinned dependencies.
+- Use Python 3.11 or 3.12 in a virtual environment, with pinned dependencies. Python must stay at 3.12 or earlier on this Mac, because torch 2.2.2 and torchaudio 2.2.2 have no Intel Mac wheels for 3.13.
 - Keep model weights in a cache outside the repo. Never commit audio, weights or API keys, and keep test fixtures small.
 - The two agents read `ANTHROPIC_API_KEY` from the environment, and the model name lives in one config value.
 
@@ -32,7 +32,7 @@ The design was made in a Claude chat you can't see. Read CONTEXT.md (design deci
 
 - Coptic letters span two Unicode blocks (CONTEXT.md, section 5). Normalise before matching.
 - Hazzat steps and lengths are relative. Never quantise to semitones, absolute pitches or BPM.
-- torchaudio's forced-alignment API was removed in torchaudio 2.9; use `ctc-forced-aligner`.
+- torchaudio's forced-alignment API was removed in torchaudio 2.9, so use torchaudio 2.2.2's `MMS_FA` pipeline with `torchaudio.functional.forced_align` and its star token, behind the aligner node's interface.
 - The MMS aligner weights are licensed for non-commercial use only (CC-BY-NC 4.0).
 
 ## Suggested layout

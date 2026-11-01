@@ -32,11 +32,11 @@ One continuous line per phrase, read in the text's direction, with the lyrics un
 | Mark length | Length along the string, in half-note units |
 | Each separate mark (a new note) | A bead at the start of each note, including a re-sung note on the same level |
 | ↑ ↓ arrows | A smooth slope up or down: one level per hazzat arrow, or n levels when the audio measures a clearly larger leap (for example, at least 1.5 steps) |
-| ↝ abrupt move | A sharp corner: a vertical jump with no slope, whatever the size. A wide leap alone is never drawn as a corner. |
+| ↝ abrupt move | A sharp corner: a vertical jump with no slope, whatever the size. A wide leap alone is never drawn as a corner. With no change of level it is a short tick across the string. |
 | ~ vibrating note | A wavy stretch |
 | . pause | A dotted, silent stretch, with a breath mark above it |
 | → sing fast | A thin dashed stretch, with the lyric underlined |
-| ( )×3 repeat | Written out in full under a bracket labelled ×3, with ↗ or ↘ if each repeat rises or falls |
+| ( )×3 repeat | Written out in full under a bracket labelled ×3, with ↗ or ↘ if each repeat rises or falls. Lyric labels go on the first copy only. |
 | [ ]① reference | The same colour and a ① label at every occurrence: the same shape at the same starting level |
 | No hazzat sign | The same shape at another level: the motif's colour, with the shift in its label, such as ①+1. This is an extension hazzat can't express. |
 | Vowel in ( ) | A vowel label such as (a) under the string where the vowel carries on |
@@ -131,8 +131,8 @@ What each node is for:
 - **Separation**: one node with three backends chosen by a setting: `bypass` (the default for now), `demucs` and `roformer`. Version 1 skips separation; when bypassed, pitch and pulse run on the full mix. A separation backend also keeps the accompaniment, for cymbal hits.
 - **Text prep**: normalises the Unicode, covers both letter blocks, expands overlined abbreviations, adds the vowel a jinkim implies, splits syllables, marks Greek words and finds repeated lines and verse boundaries.
 - **Pronunciation**: for each syllable, the sounds sung in the chosen tradition, a romanised form for the aligner, and flags for letters likely silent (gray) or added (red).
-- **Lyric aligner**: forced alignment of known syllables, not speech recognition. A catch-all token absorbs audio that isn't in the text, such as repeated words or an extra "Allelouia". It gives a confidence per syllable.
-- **Note onsets**: works inside each syllable window, so it only has to find the notes within each vowel.
+- **Lyric aligner**: forced alignment of known syllables, not speech recognition. The catch-all token is torchaudio's star token. It absorbs audio that isn't in the text, such as repeated words or an extra "Allelouia". It gives a confidence per syllable.
+- **Note onsets**: works inside each syllable window, so it only has to find the notes within each vowel. It must not use the pulse unit (for example in breath thresholds), because pulse runs after onsets and that would make a cycle.
 - **Pulse unit**: measures the half-note size per section. It defaults to one section per hymn, split at verse boundaries from text prep or at long pauses.
 - **Step size**: measures how big one level is, once per section, from the intervals between adjacent stable notes. The interpreter and round-trip check both use it.
 - **Pattern miner**: repeated text, such as a refrain or verses sung to one tune, is a strong hint that the melody repeats.
@@ -158,7 +158,7 @@ Sources: https://en.wikipedia.org/wiki/Coptic_script and https://en.wikipedia.or
 | Separation | `bypass` in version 1. When needed: `audio-separator` 0.24.1 with a RoFormer vocals model, then Demucs 4.1.0, then another machine with cached stems | The owner's Intel Mac caps PyTorch at 2.2.2. 0.24.1 is the last `audio-separator` without a PyTorch 2.3 floor, and it is untested on 2.2.2. Demucs 4.1.0 allows PyTorch 2.1 to 2.2 on Intel Macs. Needs ffmpeg. https://pypi.org/project/audio-separator/ |
 | Pitch contour | RMVPE | Built for vocal pitch and robust to noise; an ONNX port runs with onnxruntime at 10 ms frames: https://huggingface.co/Scicom-intl/rmvpe-onnx. Lighter fallbacks: CREPE, pYIN (librosa). |
 | Pulse unit | Own code, plus Beat This! for cymbal hits | https://pypi.org/project/beat-this/ |
-| Lyric aligner | `ctc-forced-aligner` (based on Meta's MMS; 1,100+ languages via romanisation) | https://github.com/MahmoudAshraf97/ctc-forced-aligner. Weights are CC-BY-NC 4.0, non-commercial. torchaudio's own forced-alignment API was removed in torchaudio 2.9, so don't build on it. |
+| Lyric aligner | torchaudio 2.2.2's `MMS_FA` pipeline with `torchaudio.functional.forced_align` and its star token | Meta's MMS, by way of romanisation. It has Intel Mac builds for Python 3.10 to 3.12 and pins torch 2.2.2. It stays behind the aligner node's interface, because torchaudio removed this API in 2.9. The weights are CC-BY-NC 4.0, non-commercial. |
 | Agents | Claude, through the Anthropic Python SDK | Key from `ANTHROPIC_API_KEY`; model name pinned in one config value; every call recorded and replayable. |
 
 Why the agents don't listen to the audio: PitchBench, a 2026 benchmark, found current audio-language models don't hear pitch reliably, even on simple synthetic tones (https://benchmarklist.com/benchmarks/pitchbench/). So specialist models measure the audio, and the LLM reasons over text, numbers and plots.

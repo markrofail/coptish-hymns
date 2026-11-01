@@ -4,7 +4,7 @@
 > In this plan, "I" and "my workspace" mean the Claude that drafted it, in a cloud workspace; "you" is the repo owner.
 > On the owner's Mac, read "Where each part runs" as: use the "On your computer" column.
 > The build-order diagram is redrawn below as Mermaid.
-> Edited here after export with the owner's Phase 0 decisions, so it now differs from that doc.
+> This repo's PLAN.md is now the source of truth; the Claude doc stays as the original version.
 
 ## Goal and approach
 
@@ -57,7 +57,7 @@ The synthesiser is the key test tool: it gives every audio part exact answers lo
 Phase 1 builds the text branch, which needs no audio and can run alongside Phase 2.
 
 1. **Text prep (code).** Normalises the Unicode, covers both Coptic letter blocks, expands overlined abbreviations from a lookup table, adds the vowel a jinkim implies and splits syllables. It also marks Greek words and finds repeated lines. Tested with: tables of tricky cases, plus 50 lines from 5 hymns with syllables counted by hand. Done when: every count matches; any mismatch is a rule to fix.
-2. **Pronunciation agent (LLM).** A rule table per tradition handles regular letters, and the LLM handles exceptions such as Greek words and word-specific sounds. For each syllable it outputs the sung sounds, a romanised form for the aligner, and flags for silent or added letters. Tested with: about 200 words checked by a cantor in your tradition. Done when: at least 95% match, every output passes its schema, and reruns give identical answers.
+2. **Pronunciation agent (LLM).** A rule table per tradition handles regular letters, and the LLM handles exceptions such as Greek words and word-specific sounds. For each syllable it outputs the sung sounds, a romanised form for the aligner (exactly `MMS_FA`'s alphabet: lowercase a-z and apostrophe), and flags for silent or added letters. Tested with: about 200 words checked by a cantor in your tradition. Done when: at least 95% match, every output passes its schema, and reruns give identical answers.
 3. **Hymn library (code).** Stores approved strings and corrections per hymn, keyed by a fingerprint of the text so small spelling differences still find the right hymn. It starts as a folder of JSON files. Done when: variants of one hymn find the same entry, and different hymns never do.
 
 ## Phase 2: audio side
@@ -66,8 +66,8 @@ Phase 2 builds the six audio parts in data order; each is tested first on synthe
 
 1. **Separation (audio model, skipped in version 1).** One node with three backends chosen by a setting: `bypass` (the default for now), `demucs` and `roformer`. Version 1 builds only the bypass; pitch and pulse then run on the full mix. When separation is needed, try `audio-separator` 0.24.1 on PyTorch 2.2.2 first. If it fails, use Demucs 4.1.0. As a last resort, separate on another machine and cache the stems. Tested with: synthetic voice mixed with cymbals and room echo. Done when: the bypass passes the full mix through unchanged, and any separation backend keeps pitch error within 10 cents of the clean voice.
 2. **Pitch contour (audio model).** RMVPE on your computer, CREPE or pYIN in my workspace, giving pitch every 10 ms with a confidence. A vibrato detector reports rate and width. Tested with: synthetic steps, glides and vibrato at several speeds and noise levels. Done when: median error is under 20 cents, and at least 90% of planted vibratos are found with under 5% false alarms.
-3. **Lyric aligner (audio model).** The MMS forced aligner on your computer, with a catch-all token for audio not in the text; in my workspace, a fallback splits the audio by the known syllable count. It outputs each syllable's start, end and confidence. Tested with: 2 minutes of a real recording, with syllable starts tapped by hand on a page I build. Done when: median start error is at most 100 ms, and 90% of syllables land within 250 ms.
-4. **Note onsets (audio model).** Inside each syllable, finds new notes from pitch changes and from re-sung notes on the same pitch, plus breaths. Tested with: synthetic audio with planted same-pitch repeats and breaths, then 30 seconds of hand-tapped real notes. Done when: F1 is at least 0.9 within 50 ms on synthetic audio.
+3. **Lyric aligner (audio model).** torchaudio 2.2.2's `MMS_FA` pipeline with `torchaudio.functional.forced_align` on your computer, with a catch-all token for audio not in the text; in my workspace, a fallback splits the audio by the known syllable count. It outputs each syllable's start, end and confidence. Tested with: 2 minutes of a real recording, with syllable starts tapped by hand on a page I build. Done when: median start error is at most 100 ms, and 90% of syllables land within 250 ms.
+4. **Note onsets (audio model).** Inside each syllable, finds new notes from pitch changes and from re-sung notes on the same pitch, plus breaths. It must not use the pulse unit, because pulse runs after onsets. Tested with: synthetic audio with planted same-pitch repeats and breaths, then 30 seconds of hand-tapped real notes. Done when: F1 is at least 0.9 within 50 ms on synthetic audio.
 5. **Pulse unit (code).** Estimates the half-note length per section from note durations, or from cymbal hits with Beat This! when cymbals are present. It defaults to one section per hymn, split at verse boundaries from text prep or at long pauses. Tested with: synthetic hymns at known tempos with up to 15% timing wobble. Done when: within 10% of the true unit in 95% of cases.
 6. **Step size (code).** Estimates how big one level is, once per section, from the intervals between adjacent stable notes, and passes it to the interpreter and the round-trip check. Tested with: synthetic hymns at known step sizes with noise and drift. Done when: within 10% of the true step in 95% of sections.
 
@@ -112,7 +112,7 @@ Everything can be built and tested in my workspace except the stronger models, w
 | --- | --- | --- |
 | Separation | Bypass only, unless its models download from GitHub (checked in Phase 2) | Bypass by default; `demucs` or `roformer` by setting |
 | Pitch contour | CREPE or pYIN | RMVPE |
-| Lyric aligner | Fallback that splits by syllable count | MMS forced aligner |
+| Lyric aligner | Fallback that splits by syllable count | torchaudio `MMS_FA` forced aligner |
 | Pronunciation and interpreter agents | Stored LLM answers | Live calls with your Claude API key |
 | All other parts | Full | Full |
 
@@ -142,6 +142,7 @@ The biggest risk is aligning syllables inside long melismas, so the plan tests i
 | Cantors pronounce differently | Aligner confidence drops | Tradition set per cantor; low-confidence syllables flagged |
 | Church acoustics: echo, cymbals, congregation | Noisy pitch track | Recording guidance, a note of which recordings work, and a separation backend when needed |
 | Intel Mac caps PyTorch at 2.2.2 | Some model packages won't install | ONNX routes where they exist, separation bypassed in version 1, and the fallback order in Phase 2 |
+| torchaudio removed forced alignment in 2.9 | Upgrading breaks the aligner | Pin 2.2.2 and keep it behind the node's interface |
 | LLM answers drift | Same input gives different strings | Pinned model, stored answers, schema checks, regression runs |
 | Strong models blocked in my workspace | Full quality testable only on your computer | Fallbacks here, same code path on your computer |
 | Aligner licence is non-commercial | Blocks any paid use | Swap the aligner before charging for anything |
