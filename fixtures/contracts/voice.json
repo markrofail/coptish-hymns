@@ -1,0 +1,7 @@
+{
+  "path": "work/demo/vocals.flac",
+  "sample_rate_hz": 44100,
+  "duration_s": 11.0,
+  "bypassed": false,
+  "accompaniment_path": "work/demo/accompaniment.flac"
+}

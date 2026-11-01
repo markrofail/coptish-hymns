@@ -1,0 +1,52 @@
+{
+  "tradition": "greco_bohairic",
+  "syllables": [
+    {
+      "syllable_index": 0,
+      "sounds": [
+        "a"
+      ],
+      "romanised": "a",
+      "silent": [],
+      "added": []
+    },
+    {
+      "syllable_index": 1,
+      "sounds": [
+        "l",
+        "ē"
+      ],
+      "romanised": "lē",
+      "silent": [],
+      "added": []
+    },
+    {
+      "syllable_index": 2,
+      "sounds": [
+        "l",
+        "ou"
+      ],
+      "romanised": "lou",
+      "silent": [],
+      "added": []
+    },
+    {
+      "syllable_index": 3,
+      "sounds": [
+        "i"
+      ],
+      "romanised": "i",
+      "silent": [],
+      "added": []
+    },
+    {
+      "syllable_index": 4,
+      "sounds": [
+        "a"
+      ],
+      "romanised": "a",
+      "silent": [],
+      "added": []
+    }
+  ]
+}

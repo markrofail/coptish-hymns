@@ -1,0 +1,11 @@
+{
+  "step_cents": 180.0,
+  "phrases": [
+    {
+      "phrase_id": "p1",
+      "passed": true,
+      "pitch_error_cents": 12.0,
+      "errors": []
+    }
+  ]
+}

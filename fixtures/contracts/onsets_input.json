@@ -1,0 +1,69 @@
+{
+  "voice": {
+    "path": "work/demo/vocals.flac",
+    "sample_rate_hz": 44100,
+    "duration_s": 11.0,
+    "bypassed": false,
+    "accompaniment_path": "work/demo/accompaniment.flac"
+  },
+  "pitch_track": {
+    "hop_s": 0.01,
+    "f0_hz": [
+      null,
+      196.0,
+      196.4,
+      195.8,
+      196.1
+    ],
+    "confidence": [
+      0.1,
+      0.9,
+      0.95,
+      0.9,
+      0.92
+    ],
+    "vibrato": [
+      {
+        "start_s": 2.0,
+        "end_s": 3.0,
+        "rate_hz": 5.5,
+        "width_cents": 60.0
+      }
+    ]
+  },
+  "syllable_times": {
+    "syllables": [
+      {
+        "syllable_index": 0,
+        "start_s": 0.0,
+        "end_s": 2.0,
+        "confidence": 0.9
+      },
+      {
+        "syllable_index": 1,
+        "start_s": 2.0,
+        "end_s": 3.0,
+        "confidence": 0.9
+      },
+      {
+        "syllable_index": 2,
+        "start_s": 4.0,
+        "end_s": 5.5,
+        "confidence": 0.9
+      },
+      {
+        "syllable_index": 3,
+        "start_s": 5.5,
+        "end_s": 6.0,
+        "confidence": 0.9
+      },
+      {
+        "syllable_index": 4,
+        "start_s": 6.0,
+        "end_s": 11.0,
+        "confidence": 0.9
+      }
+    ],
+    "catch_all": []
+  }
+}

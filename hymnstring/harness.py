@@ -25,6 +25,10 @@ class Node:
     run: Callable[[Any], Any]
 
 
+def not_built(given: Any) -> Any:
+    raise NotImplementedError("this node isn't built yet")
+
+
 def run_node(node: Node, payload: Any) -> dict:
     try:
         given = node.input.model_validate(payload)

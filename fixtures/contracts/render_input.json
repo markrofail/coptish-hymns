@@ -1,0 +1,61 @@
+{
+  "string": {
+    "format_version": 1,
+    "phrases": [
+      {
+        "phrase_id": "p1",
+        "direction": "ltr",
+        "notation": "①[ⲁ:2 ↑ 1 ↓ 1] ↑ ⲗⲏ:~2 .2 ↓ (ⲗⲟⲩ:1 ↑ 1 ↑ 1)×3↗ →1{ⲓ:•} ⲁ:2 ↝↓2 ①[(ⲁ):2 ↑ 1 ↓ 1] ↓ 4"
+      }
+    ]
+  },
+  "report": {
+    "step_cents": 180.0,
+    "phrases": [
+      {
+        "phrase_id": "p1",
+        "passed": true,
+        "pitch_error_cents": 12.0,
+        "errors": []
+      }
+    ]
+  },
+  "recording": {
+    "path": "work/demo/recording.flac"
+  },
+  "syllable_times": {
+    "syllables": [
+      {
+        "syllable_index": 0,
+        "start_s": 0.0,
+        "end_s": 2.0,
+        "confidence": 0.9
+      },
+      {
+        "syllable_index": 1,
+        "start_s": 2.0,
+        "end_s": 3.0,
+        "confidence": 0.9
+      },
+      {
+        "syllable_index": 2,
+        "start_s": 4.0,
+        "end_s": 5.5,
+        "confidence": 0.9
+      },
+      {
+        "syllable_index": 3,
+        "start_s": 5.5,
+        "end_s": 6.0,
+        "confidence": 0.9
+      },
+      {
+        "syllable_index": 4,
+        "start_s": 6.0,
+        "end_s": 11.0,
+        "confidence": 0.9
+      }
+    ],
+    "catch_all": []
+  }
+}

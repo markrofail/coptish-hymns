@@ -1,0 +1,57 @@
+{
+  "fingerprint": "demo-fingerprint",
+  "tradition": "greco_bohairic",
+  "syllables": [
+    {
+      "index": 0,
+      "text": "ⲁ",
+      "word_index": 0,
+      "is_greek": true,
+      "implied_vowel": null
+    },
+    {
+      "index": 1,
+      "text": "ⲗⲏ",
+      "word_index": 0,
+      "is_greek": true,
+      "implied_vowel": null
+    },
+    {
+      "index": 2,
+      "text": "ⲗⲟⲩ",
+      "word_index": 0,
+      "is_greek": true,
+      "implied_vowel": null
+    },
+    {
+      "index": 3,
+      "text": "ⲓ",
+      "word_index": 0,
+      "is_greek": true,
+      "implied_vowel": null
+    },
+    {
+      "index": 4,
+      "text": "ⲁ",
+      "word_index": 0,
+      "is_greek": true,
+      "implied_vowel": null
+    }
+  ],
+  "lines": [
+    {
+      "index": 0,
+      "text": "ⲁⲗⲏ",
+      "first_syllable": 0,
+      "last_syllable": 1,
+      "repeat_of": null
+    },
+    {
+      "index": 1,
+      "text": "ⲗⲟⲩⲓⲁ",
+      "first_syllable": 2,
+      "last_syllable": 4,
+      "repeat_of": null
+    }
+  ]
+}

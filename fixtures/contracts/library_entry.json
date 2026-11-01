@@ -1,0 +1,26 @@
+{
+  "fingerprint": "demo-fingerprint",
+  "strings": [
+    {
+      "format_version": 1,
+      "phrases": [
+        {
+          "phrase_id": "p1",
+          "direction": "ltr",
+          "notation": "①[ⲁ:2 ↑ 1 ↓ 1] ↑ ⲗⲏ:~2 .2 ↓ (ⲗⲟⲩ:1 ↑ 1 ↑ 1)×3↗ →1{ⲓ:•} ⲁ:2 ↝↓2 ①[(ⲁ):2 ↑ 1 ↓ 1] ↓ 4"
+        }
+      ]
+    }
+  ],
+  "corrections": [
+    {
+      "fingerprint": "demo-fingerprint",
+      "phrase_id": "p1",
+      "before": "1 ↑ 2",
+      "after": "2 ↑ 2",
+      "comment": "The first note is held for a full note.",
+      "reviewer": "cantor-1",
+      "caused_by": null
+    }
+  ]
+}
