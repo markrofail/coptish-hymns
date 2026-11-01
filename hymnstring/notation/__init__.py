@@ -17,6 +17,7 @@ from hymnstring.notation.model import (
     Vowel,
 )
 from hymnstring.notation.parser import NotationError, parse_hymn, parse_line
+from hymnstring.notation.validator import Problem, validate
 from hymnstring.notation.writer import write_hymn, write_line
 
 __all__ = [
@@ -31,12 +32,14 @@ __all__ = [
     "Note",
     "Pause",
     "Phrase",
+    "Problem",
     "Repeat",
     "SameLevel",
     "Syllable",
     "Vowel",
     "parse_hymn",
     "parse_line",
+    "validate",
     "write_hymn",
     "write_line",
 ]
