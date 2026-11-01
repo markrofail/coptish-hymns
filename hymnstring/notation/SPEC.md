@@ -219,7 +219,7 @@ syllable = (letters | "<+" letters ">" | "<-" letters ">")+
 
 `length`, `count` and `label` are whole numbers. A `(` that closes with `):` is a vowel label, and one that closes with `)x` is a repeat. `letters` is any run of letters and their combining marks, from both Coptic Unicode blocks or any other script.
 
-Input aliases, each replaced by its canonical sign before parsing:
+Input aliases. Each is read as its canonical sign while the line is read token by token, never by replacing text across the whole line, so a lyric is never rewritten. `[...]` is read as a whole before any run of dots is considered, so its three dots are not a pause. The aliases are:
 
 | Alias | Canonical |
 | --- | --- |
