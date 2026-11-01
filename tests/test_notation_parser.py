@@ -83,6 +83,9 @@ PARSES = [
     ("p1 ltr: (lou:1)x3^", line([Repeat((Note(1, lyric=syl("lou")),), 3, 1)])),
     ("p1 ltr: (1)x3v2", line([Repeat((Note(1),), 3, -2)])),
     ("p1 ltr: (1)x3^2 5", line([Repeat((Note(1),), 3, 2), Note(5)])),
+    ("p1 ltr: (1)x3^ 2", line([Repeat((Note(1),), 3, 1), Note(2)])),
+    ("p1 ltr: (1)x10000", line([Repeat((Note(1),), 10000)])),
+    ("a_b-C9 ltr: 1", line([Note(1)], phrase_id="a_b-C9")),
     ("p1 ltr: (1 ^ 1)x2", line([Repeat((Note(1), Move(False, 1), Note(1)), 2)])),
     ("p1 ltr: (^ 1)x2", line([Repeat((Move(False, 1), Note(1)), 2)])),
     ("p1 ltr: ((1)x2 ^ 1)x3", line([Repeat((Repeat((Note(1),), 2), Move(False, 1), Note(1)), 3)])),
@@ -300,6 +303,16 @@ REJECTS = [
     "p1 ltr: " + "(" * 5000,
     "p1 ltr: " + "#1[" * 5000,
     "p1 ltr: " + "1" * 5000,
+    # a phrase that expands to more than 10,000 notes and pauses
+    "p1 ltr: (1)x10001",
+    "p1 ltr: (((1)x100)x100)x2",
+    "p1 ltr: " + "(" * 9 + "1" + ")x10" * 9,
+    "p1 ltr: #1[(1)x6000] [...]#1",
+    # a phrase id is letters, digits, _ and -
+    "p.1 ltr: 1",
+    "a:b ltr: 1",
+    "p1é ltr: 1",
+    "p 1 ltr: 1",
 ]
 
 

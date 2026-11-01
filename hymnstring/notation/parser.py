@@ -22,6 +22,7 @@ from hymnstring.notation.model import (
 
 MAX_DEPTH = 50  # brackets nested deeper than this are an error, not a stack overflow
 MAX_DIGITS = 9
+MAX_EVENTS = 10_000  # notes and pauses a phrase may expand to, so a repeat cannot fill memory
 
 MOVE_UP = "^↑"
 MOVE_DOWN = "v↓"
@@ -34,7 +35,7 @@ TIMES = "x×"
 CLOSERS = ")]}"
 CIRCLED = {chr(0x2460 + n): n + 1 for n in range(20)}  # ① to ⑳
 
-HEADER = re.compile(r"([^\s:]+) (ltr|rtl):(?: |$)")
+HEADER = re.compile(r"([A-Za-z0-9_-]+) (ltr|rtl):(?: |$)")
 
 
 class NotationError(ValueError):
@@ -68,6 +69,22 @@ def _parse_phrase(line: str, seen: dict[int, Motif]) -> Phrase:
 
 def _is_letter(char: str) -> bool:
     return unicodedata.category(char)[0] in "LM"
+
+
+def _events(items: tuple[Item, ...]) -> int:
+    """Notes and pauses once repeats are expanded, counted without expanding them."""
+    total = 0
+    for item in items:
+        match item:
+            case Note() | Pause():
+                total += 1
+            case Fast():
+                total += sum(isinstance(i, Bead) for i in item.items)
+            case Repeat():
+                total += item.count * _events(item.items)
+            case Motif():
+                total += _events(item.items)
+    return total
 
 
 def _strip(items: tuple[Item, ...]) -> tuple[Item, ...]:
@@ -166,6 +183,8 @@ class _Parser:
             join, items = items[0], items[1:]
         if not items:
             raise self.fail("a phrase needs at least one item after its join")
+        if _events(items) > MAX_EVENTS:
+            raise self.fail(f"a phrase can expand to at most {MAX_EVENTS} notes and pauses", 0)
         return Phrase(header.group(1), header.group(2), join, items)
 
     def after_item(self, closer: str | None) -> None:

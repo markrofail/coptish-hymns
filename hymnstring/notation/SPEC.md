@@ -15,7 +15,7 @@ p1 ltr: #1[A:2 ^ 1 v 1] ^ lē:~2 .2 v (lou:1)x3^ >1{i:*} a:2 !v2 #1[(a):2 ^ 1 v 
 Six rules make it work:
 
 1. **One line per phrase.** `p1` is the phrase id and `ltr` or `rtl` the direction. Tokens follow in reading order, one space apart.
-2. **Numbers are lengths** in half-note units: half = 1, full = 2, double = 4. Any whole number is allowed. Each section of a hymn has its own unit.
+2. **Numbers are lengths** in half-note units: half = 1, full = 2, double = 4. Any whole number is allowed, but a phrase can expand to at most 10,000 notes and pauses. Each section of a hymn has its own unit.
 3. **Every written note is one bead.** A repeat writes its notes once, and its copies add the rest. Two notes with no move between them are a re-sung note on the same level, so same-level repeats need no sign of their own.
 4. **Levels are never written.** Moves say up or down, and levels are worked out from them, with the phrase's lowest note as level 0. The text has no pitch names, semitones, seconds or BPM.
 5. **Brackets label notes, and a repeat holds one copy.** A motif bracket only labels notes. A repeat bracket writes its body once, with a count, so the text can have fewer tokens than the drawing has beads. Remove the brackets and expand the repeats, and you have the flat list of notes the synthesiser and round-trip check use.
@@ -180,7 +180,7 @@ Three details come from `reference/string_demo.svg`, which is otherwise only a s
 
 The validator rejects a string when:
 
-1. It has an unknown token, or a length, move size, repeat level step or shift below 1, or a repeat count below 2. A bare `!` and `=` are the only moves with no size.
+1. It has an unknown token, or a length, move size, repeat level step or shift below 1, or a repeat count below 2, or a phrase that expands to more than 10,000 notes and pauses. A bare `!` and `=` are the only moves with no size.
 2. The first phrase of the hymn has a join, or `=` appears anywhere but as a phrase's join.
 3. A phrase, after its join, starts with a pause or a move, or ends on a move. A join is followed by a note, a fast group, or a bracket that starts with one.
 4. A move is followed by another move or a pause, so there is at most one move between two notes. The join counts as the move before the phrase's first note.
@@ -219,7 +219,7 @@ lyric    = syllable | "(" letters ")"
 syllable = (letters | "<+" letters ">" | "<-" letters ">")+
 ```
 
-`length`, `count` and `label` are whole numbers. A `(` that closes with `):` is a vowel label, and one that closes with `)x` is a repeat. `letters` is any run of letters and their combining marks, from both Coptic Unicode blocks or any other script.
+`id` is one or more letters, digits, `_` and `-`, with no accents. `length`, `count` and `label` are whole numbers. A `(` that closes with `):` is a vowel label, and one that closes with `)x` is a repeat. `letters` is any run of letters and their combining marks, from both Coptic Unicode blocks or any other script.
 
 Input aliases. Each is read as its canonical sign while the line is read token by token, never by replacing text across the whole line, so a lyric is never rewritten. `[...]` is read as a whole before any run of dots is considered, so its three dots are not a pause. The aliases are:
 
