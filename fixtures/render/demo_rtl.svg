@@ -45,10 +45,10 @@
 <text class="motif-label" x="115" y="62" text-anchor="middle" font-size="12" fill="#5F5E5A">①</text>
 <path class="repeat-bracket" d="M215 38 L215 32 L177.5 32 L177.5 38" fill="none" stroke="#5F5E5A" stroke-width="1"/>
 <text class="repeat-label" x="196.25" y="24" text-anchor="middle" font-size="12" fill="#5F5E5A">×3 ↖</text>
-<text class="lyric" x="315" y="142" text-anchor="end" direction="rtl" font-size="14" fill="#2C2C2A">A</text>
-<text class="lyric" x="265" y="142" text-anchor="end" direction="rtl" font-size="14" fill="#2C2C2A">lē</text>
-<text class="lyric" x="215" y="142" text-anchor="end" direction="rtl" font-size="14" fill="#2C2C2A">lou</text>
-<text class="lyric" x="177.5" y="142" text-anchor="end" direction="rtl" text-decoration="underline" font-size="14" fill="#2C2C2A">i</text>
-<text class="lyric" x="165" y="142" text-anchor="end" direction="rtl" font-size="14" fill="#2C2C2A">a</text>
-<text class="vowel" x="140" y="142" text-anchor="end" direction="rtl" font-size="12" fill="#5F5E5A">(a)</text>
+<text class="lyric" x="315" y="142" direction="rtl" font-size="14" fill="#2C2C2A">A</text>
+<text class="lyric" x="265" y="142" direction="rtl" font-size="14" fill="#2C2C2A">lē</text>
+<text class="lyric" x="215" y="142" direction="rtl" font-size="14" fill="#2C2C2A">lou</text>
+<text class="lyric" x="177.5" y="142" direction="rtl" text-decoration="underline" font-size="14" fill="#2C2C2A">i</text>
+<text class="lyric" x="165" y="142" direction="rtl" font-size="14" fill="#2C2C2A">a</text>
+<text class="vowel" x="140" y="142" direction="rtl" font-size="12" fill="#5F5E5A">(a)</text>
 </svg>

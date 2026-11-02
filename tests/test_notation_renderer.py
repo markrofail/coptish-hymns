@@ -1,5 +1,8 @@
 import os
 import re
+import subprocess
+import sys
+from fractions import Fraction
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
@@ -153,6 +156,7 @@ def test_demo_beads_take_the_innermost_motif_colour():
         ("4 2 !^ 6 v 2 1", [4, 2, 6, 2]),
         ("~2 ^ 5 ! 3 .2 ", [2, 5]),
         (">4{* ^ * v * ^ *} 2", [1, 1, 1, 1]),
+        (">2{* ^ * v *}", [Fraction(2, 3)] * 2),
     ],
 )
 @pytest.mark.parametrize("unit", [8, 12.5, 20])
@@ -160,9 +164,9 @@ def test_bead_gaps_are_the_note_lengths_times_one_unit(text, lengths, unit):
     xs = [x for x, _ in beads(draw(text, unit=unit))]
     gaps = [b - a for a, b in zip(xs, xs[1:])]
 
-    assert len(gaps) >= len(lengths) - 1
+    assert len(gaps) == len(lengths)
     for gap, length in zip(gaps, lengths):
-        assert gap == pytest.approx(length * unit, abs=0.01)
+        assert gap == pytest.approx(float(length) * unit, abs=0.01)
 
 
 def test_a_bare_bang_draws_one_tick_across_the_string():
@@ -253,25 +257,26 @@ def test_pauses_at_the_edges_end_the_string_or_hand_over_to_a_move():
 JINKIM = "ⲧ̅ⲓ:* ^ ⲛⲉ:* v ⲣⲁ:*"
 
 
-def box_widths(root):
-    return [0.62 * 14 * len(words(t).replace("̅", "")) for t in find(root, "lyric")]
-
-
 @pytest.mark.parametrize("fast", [">2{ⲧⲓ:* ^ ⲛⲉ:* v ⲣⲁ:*}", ">2{" + JINKIM + "}"])
 def test_crowded_lyrics_do_not_overlap_and_a_combining_mark_has_no_width(fast):
     phrase = parse_line(f"p1 ltr: {fast}")
     unit = hymn_unit(Hymn((phrase,)))
     root = ET.fromstring(render_phrase(phrase, unit=unit))
-    xs = [float(t.get("x")) for t in find(root, "lyric")]
 
-    assert unit > 12.5
-    assert unit == 30.54  # (0.62 * 14 * 2 + 3) / (2/3), rounded up
-    for width, left, right in zip(box_widths(root), xs, xs[1:]):
-        assert right - left >= width + 3 - 1e-6
+    # (0.62 * 14 * 2 + 3) / (2/3) is 30.54, over the cap; the rest is solved by rows.
+    assert unit == 30
+    lyrics = find(root, "lyric")
+    assert len({t.get("y") for t in lyrics}) > 1
+    for row in {t.get("y") for t in lyrics}:
+        xs = [float(t.get("x")) for t in lyrics if t.get("y") == row]
+        widths = [0.62 * 14 * len(words(t).replace("̅", "")) for t in lyrics if t.get("y") == row]
+        for width, left, right in zip(widths, xs, xs[1:]):
+            assert right - left >= width + 3 - 1e-6
 
 
 def boxes(root):
-    # Real extents, worked out here from the drawn marks and not from the renderer's rules.
+    # Extents worked out here from the drawn marks. Text is boxed at a literal 7 px a glyph,
+    # which is 12 px text at about 0.58 em and not the renderer's own estimate.
     found = []
     for mark in find(root, "breath"):
         dot = mark.find("{http://www.w3.org/2000/svg}circle")
@@ -279,7 +284,7 @@ def boxes(root):
         found.append((cx - 2.5, cx + 3, cy - 2.5, cy + 8.5))
     for label in find(root, "motif-label") + find(root, "repeat-label"):
         x, y = float(label.get("x")), float(label.get("y"))
-        half = 0.62 * 12 * len(words(label)) / 2
+        half = 7 * len(words(label)) / 2
         found.append((x - half, x + half, y - 9, y + 3))
     for bracket in find(root, "repeat-bracket"):
         xs, ys = numbers(bracket)[0::2], numbers(bracket)[1::2]
@@ -312,12 +317,27 @@ def test_right_to_left_mirrors_the_geometry_but_not_the_letters():
     first, second = find(root, "lyric")
 
     assert [words(first), words(second)] == ["آ", "مين"]
-    assert (first.get("text-anchor"), first.get("direction")) == ("end", "rtl")
+    # Under direction=rtl the default anchor puts a lyric's right edge on its bead.
+    assert (first.get("text-anchor"), first.get("direction")) == (None, "rtl")
+    assert (second.get("text-anchor"), second.get("direction")) == (None, "rtl")
     width = float(root.get("viewBox").split()[2])
     assert [x for x, _ in beads(root)] == pytest.approx([width - 40, width - 65], abs=0.01)
-    assert float(first.get("x")) > float(second.get("x"))
-    # The last lyric reaches left to the margin and no further.
-    assert float(second.get("x")) - 0.62 * 14 * 3 == pytest.approx(40, abs=0.01)
+    assert [float(t.get("x")) for t in (first, second)] == pytest.approx([width - 40, width - 65], abs=0.01)
+
+
+def test_a_right_to_left_vowel_label_has_no_anchor_either():
+    (vowel,) = find(draw("(ⲁ):2", "rtl"), "vowel")
+
+    assert (vowel.get("text-anchor"), vowel.get("direction")) == (None, "rtl")
+    assert find(draw("(ⲁ):2"), "vowel")[0].get("direction") is None
+
+
+def test_a_page_marks_only_right_to_left_figures_and_keeps_svg_text_in_order():
+    page = render_hymn(parse_hymn("p1 ltr: 2 ^ 2\np2 rtl: 2 ^ 2"))
+
+    assert page.count("<figure>") == 1 and page.count('<figure dir="rtl">') == 1
+    assert page.index("<figure>") < page.index('<figure dir="rtl">')
+    assert "svg{direction:ltr}" in page
 
 
 # --- units and pages -------------------------------------------------------
@@ -336,9 +356,79 @@ def test_a_hymn_page_draws_every_phrase_with_the_hymns_unit():
     first, second = (beads(d) for d in drawings)
 
     assert page.startswith("<!doctype html>")
-    assert hymn_unit(hymn) == 30.54
-    assert first[1][0] - first[0][0] == pytest.approx(2 * 30.54, abs=0.01)
-    assert second[1][0] - second[0][0] == pytest.approx(30.54 * 2 / 3, abs=0.01)
+    assert hymn_unit(hymn) == 30
+    assert first[1][0] - first[0][0] == pytest.approx(2 * 30, abs=0.01)
+    assert second[1][0] - second[0][0] == pytest.approx(30 * 2 / 3, abs=0.01)
+
+
+def test_wide_coptic_letters_and_capitals_get_a_wider_estimate():
+    # Two 0.85 em letters of 14 px, plus the gap of 3, over one half note.
+    assert hymn_unit(parse_hymn("p1 ltr: ϣⲱ:1 ⲡⲓ:1")) == 26.8
+    assert hymn_unit(parse_hymn("p1 ltr: ⲙⲫ:1 ⲡⲓ:1")) == 26.8
+    assert hymn_unit(parse_hymn("p1 ltr: ⲀⲂ:1 ⲡⲓ:1")) == 26.8
+    # Other lowercase letters stay at 0.62: (2 * 0.62 * 14 + 3) = 20.36.
+    assert hymn_unit(parse_hymn("p1 ltr: ⲛⲉ:1 ⲡⲓ:1")) == 20.36
+
+
+LONG = "ⲅ" * 10  # 10 * 0.62 * 14 = 86.8 wide
+
+
+def test_the_unit_stops_at_30_however_long_the_syllable():
+    assert hymn_unit(parse_hymn(f"p1 ltr: {LONG}:1 ⲡⲓ:1")) == 30
+
+
+def test_lyrics_that_still_collide_move_down_a_row_and_no_bead_moves():
+    text = f"{LONG}:1 {LONG}:1 {LONG}:1 ⲡⲓ:1"
+    flat = draw(text, unit=30)
+
+    # Beads at 40 70 100 130. Row 0 is busy to 126.8 + 3, row 1 to 156.8 + 3, so the third drops
+    # to row 2 and the fourth, at 130, fits row 0 again.
+    assert [x for x, _ in beads(flat)] == [40, 70, 100, 130]
+    assert [float(t.get("x")) for t in find(flat, "lyric")] == [40, 70, 100, 130]
+    assert [float(t.get("y")) - float(find(flat, "lyric")[0].get("y")) for t in find(flat, "lyric")] == [0, 16, 32, 0]
+    # The canvas grows by two rows, 32 px, and by nothing when one row is enough.
+    one = draw("ⲅⲅ:1 ⲡⲓ:1", unit=30)
+    assert float(flat.get("viewBox").split()[3]) - float(one.get("viewBox").split()[3]) == 32
+    assert float(one.get("viewBox").split()[3]) == 60  # top 18 (12 + 6 above the bead), drop 28, bottom 14
+
+
+def test_mirrored_crowded_lyrics_use_the_same_rows():
+    text = f"{LONG}:1 {LONG}:1 {LONG}:1 ⲡⲓ:1"
+    ltr, rtl = draw(text, unit=30), draw(text, "rtl", unit=30)
+
+    assert [t.get("y") for t in find(rtl, "lyric")] == [t.get("y") for t in find(ltr, "lyric")]
+    assert ltr.get("viewBox") == rtl.get("viewBox")
+
+
+def test_a_vowel_label_on_a_fast_note_is_underlined_too():
+    (vowel,) = find(draw(">1{(ⲁ):*}"), "vowel")
+
+    assert vowel.get("text-decoration") == "underline"
+    assert find(draw("(ⲁ):2"), "vowel")[0].get("text-decoration") is None
+
+
+def test_beads_in_a_dense_fast_group_shrink_to_a_2_5th_of_the_gap():
+    # Six notes in one half note at 12.5: gaps of 2.0833, radius 2.0833 / 2.5 = 0.83.
+    radii = [float(b.get("r")) for b in find(draw(">1{* * * * * *}"), "bead")]
+    assert radii == pytest.approx([0.83] * 6, abs=0.005)
+    # A roomy fast note keeps 3, and so does every other note.
+    assert [b.get("r") for b in find(draw(">2{* ^ *} 2"), "bead")] == ["3", "3", "3"]
+
+
+def test_a_huge_vibrato_is_bounded_and_ends_with_a_line():
+    code = (
+        "import sys, re\n"
+        "from hymnstring.notation import parse_line, render_phrase\n"
+        "svg = render_phrase(parse_line('p1 ltr: ~999999999'))\n"
+        "d = re.search(r'class=\"wave\" d=\"([^\"]*)\"', svg).group(1)\n"
+        "print(d.count('Q') + d.count('T'), d.split()[-2].startswith('L'))\n"
+    )
+    done = subprocess.run(
+        [sys.executable, "-c", code], capture_output=True, text=True, timeout=20, cwd=FIXTURES.parents[1]
+    )
+
+    assert done.returncode == 0, done.stderr
+    assert done.stdout.split()[0] == "2000"
 
 
 # --- snapshots -------------------------------------------------------------

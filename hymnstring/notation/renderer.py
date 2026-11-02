@@ -13,6 +13,7 @@ LEVEL_PX = 20
 MARGIN_X = 40
 STROKE = 3
 BEAD_R = 3
+MAX_UNIT_PX = 30  # the widest a half note is drawn
 SLOPE_PX = 6
 TEAL = "#1D9E75"
 GRAY = "#888780"
@@ -24,12 +25,15 @@ MOTIF_COLOURS = ("#7F77DD", "#D85A30", "#378ADD", "#BA7517", "#D4537E", "#639922
 LYRIC_SIZE = 14
 LABEL_SIZE = 12
 LYRIC_GAP = 3
+LYRIC_ROW_PX = 16  # between rows of lyrics
 FONT = "-apple-system, 'Helvetica Neue', Helvetica, Arial, 'Noto Sans Coptic', sans-serif"
 
 TOP_PX = 12  # between the canvas top and the highest annotation
 LYRIC_DROP = 28  # lyric baseline below the lowest level
 BOTTOM_PX = 14  # canvas end below the lyric baseline
 WAVE_PX = 3  # width of one half-wave of a vibrato
+MAX_WAVES = 2000  # a longer vibrato is drawn with this many, then a line
+WIDE = frozenset("ⲱϣⲙⲫⲯ")  # Coptic letters wider than most, with their capitals
 
 
 def _n(value: float) -> str:
@@ -48,8 +52,12 @@ def _size(lyric: Syllable | Vowel) -> int:
 
 
 def _text_width(text: str, size: int) -> Fraction:
-    """Estimated width. Combining marks add none."""
-    return Fraction(62, 100) * size * sum(not unicodedata.category(c).startswith("M") for c in text)
+    """Estimated width: 0.85 em for wide letters and capitals, 0.62 for the rest. Combining marks add none."""
+    em = Fraction(0)
+    for c in text:
+        if not unicodedata.category(c).startswith("M"):
+            em += Fraction(85, 100) if c.isupper() or c in WIDE else Fraction(62, 100)
+    return em * size
 
 
 def _spans(lyric: Syllable) -> str:
@@ -62,7 +70,7 @@ def _spans(lyric: Syllable) -> str:
 
 
 def hymn_unit(hymn: Hymn) -> float:
-    """The smallest unit, at least a half note, at which no lyric runs into the next."""
+    """The smallest unit, at least a half note and at most MAX_UNIT_PX, at which no lyric runs into the next."""
     need = Fraction(str(UNIT_PX))
     for phrase in hymn.phrases:
         owner, distance = None, Fraction(0)  # the last lyric, and the length since it
@@ -74,18 +82,21 @@ def hymn_unit(hymn: Hymn) -> float:
                     need = max(need, (width + LYRIC_GAP) / distance)
                 owner, distance = lyric, Fraction(0)
             distance += event.length
-    return ceil(need * 100) / 100
+    return min(ceil(need * 100) / 100, MAX_UNIT_PX)
 
 
 def render_hymn(hymn: Hymn) -> str:
     unit = hymn_unit(hymn)
-    figures = "\n".join(f"<figure>\n{render_phrase(p, unit)}\n</figure>" for p in hymn.phrases)
+    figures = "\n".join(  # a right-to-left figure opens scrolled to its start, on the right
+        f"<figure{' dir=\"rtl\"' if p.direction == 'rtl' else ''}>\n{render_phrase(p, unit)}\n</figure>"
+        for p in hymn.phrases
+    )
     return (
         '<!doctype html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n'
         '<meta name="viewport" content="width=device-width, initial-scale=1">\n'
         "<title>String notation</title>\n"
         "<style>body{margin:16px;background:#fff}figure{margin:0 0 8px;overflow-x:auto}"
-        "svg{max-width:none}</style>\n</head>\n<body>\n" + figures + "\n</body>\n</html>\n"
+        "svg{max-width:none}svg{direction:ltr}</style>\n</head>\n<body>\n" + figures + "\n</body>\n</html>\n"
     )
 
 
@@ -118,11 +129,12 @@ class _Drawing:
         ]
         right = max([self.xs[count]] + [self.xs[i] + float(_text_width(_letters(l), _size(l))) for i, l in self.lyrics])
         self.width = right + MARGIN_X
+        self.rows = self.place_lyrics()
 
         self.marks = self.place_marks()
         top = min([m["base"] - m["height"] for m in self.marks] + [min(self.ys[:count], default=0) - 6])
         self.shift = TOP_PX - top
-        self.height = self.shift + LYRIC_DROP + BOTTOM_PX
+        self.height = self.shift + LYRIC_DROP + LYRIC_ROW_PX * max(self.rows, default=0) + BOTTOM_PX
 
     # -- helpers --
 
@@ -142,6 +154,18 @@ class _Drawing:
             if (m.first_event < index if inside else m.first_event <= index) and index < m.end_event:
                 found = MOTIF_COLOURS[(m.label - 1) % len(MOTIF_COLOURS)]
         return found
+
+    def place_lyrics(self) -> list[int]:
+        """Each lyric's row: the first whose previous lyric it clears by LYRIC_GAP. Beads never move."""
+        ends, rows = [], []  # where each row's last lyric ends, and the row of each lyric
+        for i, lyric in self.lyrics:
+            x = self.xs[i]
+            row = next((r for r, end in enumerate(ends) if x >= end + LYRIC_GAP), len(ends))
+            if row == len(ends):
+                ends.append(0)
+            ends[row] = x + float(_text_width(_letters(lyric), _size(lyric)))
+            rows.append(row)
+        return rows
 
     # -- annotations --
 
@@ -219,7 +243,7 @@ class _Drawing:
         if event.kind == "fast":
             return self.path("fast", f"M{p(x, y)} L{p(stop, y)}", colour, 1.5, ' stroke-dasharray="3 2.5" stroke-linecap="butt"')
         if event.kind == "vibrato":
-            half = floor((stop - x) / WAVE_PX + 1e-9)
+            half = min(floor((stop - x) / WAVE_PX + 1e-9), MAX_WAVES)
             d = f"M{p(x, y)}"
             if half:
                 d += f" Q{p(x + WAVE_PX / 2, y - 7)} {p(x + WAVE_PX, y)}"
@@ -248,9 +272,15 @@ class _Drawing:
                 out.append(self.path("tick", f"M{p(end, y - 6)} L{p(end, y + 6)}", colour, 1.5))
         return out
 
+    def radius(self, i: int) -> float:
+        """A fast note's bead shrinks in a dense group so its neighbours can be counted."""
+        if self.events[i].kind == "fast":
+            return min(BEAD_R, (self.xs[i + 1] - self.xs[i]) / 2.5)
+        return BEAD_R
+
     def beads(self) -> list[str]:
         return [
-            f'<circle class="bead" cx="{_n(self.X(self.xs[i]))}" cy="{_n(self.ys[i] + self.shift)}" r="{BEAD_R}" '
+            f'<circle class="bead" cx="{_n(self.X(self.xs[i]))}" cy="{_n(self.ys[i] + self.shift)}" r="{_n(self.radius(i))}" '
             f'fill="{self.motif_at(i, inside=False)}"/>'
             for i, e in enumerate(self.events)
             if isinstance(e, FlatNote)
@@ -258,17 +288,15 @@ class _Drawing:
 
     def lyric_texts(self) -> list[str]:
         out = []
-        y = _n(self.shift + LYRIC_DROP)
-        side = ' text-anchor="end" direction="rtl"' if self.rtl else ""
-        for i, lyric in self.lyrics:
-            x = _n(self.X(self.xs[i]))
+        side = ' direction="rtl"' if self.rtl else ""  # the right edge, not the left, sits on the bead
+        for (i, lyric), row in zip(self.lyrics, self.rows):
+            x, y = _n(self.X(self.xs[i])), _n(self.shift + LYRIC_DROP + LYRIC_ROW_PX * row)
+            line = ' text-decoration="underline"' if self.events[i].kind == "fast" else ""
             if isinstance(lyric, Vowel):
                 out.append(
-                    f'<text class="vowel" x="{x}" y="{y}"{side} font-size="{LABEL_SIZE}" fill="{LABEL}">{escape(_letters(lyric))}</text>'
+                    f'<text class="vowel" x="{x}" y="{y}"{side}{line} font-size="{LABEL_SIZE}" fill="{LABEL}">{escape(_letters(lyric))}</text>'
                 )
                 continue
-            fast = self.events[i].kind == "fast"
-            line = ' text-decoration="underline"' if fast else ""
             out.append(
                 f'<text class="lyric" x="{x}" y="{y}"{side}{line} font-size="{LYRIC_SIZE}" fill="{INK}">{_spans(lyric)}</text>'
             )
