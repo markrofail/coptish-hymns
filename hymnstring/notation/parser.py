@@ -443,4 +443,6 @@ class _Parser:
         label = self.label()
         if label not in self.seen:
             raise self.fail(f"no earlier occurrence of motif {label} to copy", start)
+        if not self.known[id(self.seen[label])]:
+            raise self.fail(f"motif {label} has no notes or pauses to copy", start)
         return self.seen[label]

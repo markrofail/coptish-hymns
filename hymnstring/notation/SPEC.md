@@ -103,7 +103,7 @@ p3 ltr: #1[2 ^ 1] 4
 
 ### Motif copies
 
-A later `[...]#1` with no notes inside, whose label comes after the bracket, copies the first occurrence's shape without its lyrics. The three dots are written as they are. `[...]①` is the hazzat form. It is resolved when the hymn is parsed, across phrases, and the writer outputs the full canonical occurrence, such as `#1[2 ^ 1 v 1]`. It is a plain occurrence, so it starts on the same level as the other plain ones. With no earlier occurrence of the label it is an error. There is no shifted form of it.
+A later `[...]#1` with no notes inside, whose label comes after the bracket, copies the first occurrence's shape without its lyrics. The three dots are written as they are. `[...]①` is the hazzat form. It is resolved when the hymn is parsed, across phrases, and the writer outputs the full canonical occurrence, such as `#1[2 ^ 1 v 1]`. It is a plain occurrence, so it starts on the same level as the other plain ones. With no earlier occurrence of the label it is an error. A motif with no notes or pauses has nothing to copy, so copying one is an error too. There is no shifted form of it.
 
 Example: `#1[2 ^ 1] v 2 [...]#1` is written back as `#1[2 ^ 1] v 2 #1[2 ^ 1]`, the second motif at the same level as the first.
 
@@ -188,7 +188,7 @@ The validator rejects a string when:
 6. A fast group holds anything but `*` notes and moves, or a `*` appears outside one.
 7. Two occurrences of a motif differ in shape, anywhere in the hymn, after expanding repeats.
 8. Within a chain, a plain motif starts on a different level from another plain occurrence, or a shifted one isn't that many levels from the plain ones in that chain, or, with no plain one in the chain, from the other shifted ones.
-9. A shifted motif comes before the motif's first plain occurrence in the hymn, or has a shift of 0. A `[...]` copy has no earlier occurrence of its label, or has a shift.
+9. A shifted motif comes before the motif's first plain occurrence in the hymn, or has a shift of 0. A `[...]` copy has no earlier occurrence of its label, copies a motif with no notes or pauses, or has a shift.
 10. A motif sits inside a repeat that changes level (`^` or `v`).
 11. A lyric isn't NFC, or contains anything but letters, combining marks and the letter marks above.
 

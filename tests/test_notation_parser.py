@@ -324,6 +324,9 @@ REJECTS = [
     "p1 ltr: (((1)x100)x100)x2",
     "p1 ltr: " + "(" * 9 + "1" + ")x10" * 9,
     "p1 ltr: #1[(1)x6000] [...]#1",
+    # a motif with no notes or pauses has nothing to copy
+    "p1 ltr: #1[^] [...]#1",
+    "p1 ltr: #1[(^)x2] [...]#1",
     # a phrase id is letters, digits, _ and -
     "p.1 ltr: 1",
     "a:b ltr: 1",
@@ -370,10 +373,10 @@ def test_jinkim_and_both_coptic_blocks_are_letters():
     assert write_line(parse_line(f"p1 ltr: {jinkim}:2 (ⲁ):1")) == f"p1 ltr: {jinkim}:2 (ⲁ):1"
 
 
-def doubling_line(depth):
+def doubling_line(depth, first="1"):
     """#1 is one note, and each later motif is two copies of the one before: 2**(depth-1) notes."""
     motifs = [f"#{k}[[...]#{k - 1} [...]#{k - 1}]" for k in range(2, depth + 1)]
-    return "p1 ltr: " + " ".join(["#1[1]", *motifs])
+    return "p1 ltr: " + " ".join([f"#1[{first}]", *motifs])
 
 
 def parse_in_a_subprocess(text):
@@ -401,6 +404,11 @@ def parse_in_a_subprocess(text):
 
 def test_motifs_that_copy_motifs_end_in_notation_error_quickly():
     assert parse_in_a_subprocess(doubling_line(40)) == "NotationError"
+
+
+def test_copies_of_a_motif_with_no_notes_are_rejected_at_once():
+    with pytest.raises(NotationError):
+        parse_hymn(doubling_line(40, first="^"))
 
 
 def test_motifs_that_copy_motifs_still_parse_within_the_cap():
