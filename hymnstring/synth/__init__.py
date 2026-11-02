@@ -1,5 +1,6 @@
 """The synthesiser: sings a known string, so every audio part can be tested against exact answers."""
 
+from hymnstring.synth.random_hymns import PlannedEvent, RandomHymn, random_hymn, random_settings
 from hymnstring.synth.score import (
     CYMBALS,
     ECHO,
@@ -21,6 +22,8 @@ __all__ = [
     "ECHO",
     "MAX_SECONDS",
     "NOISE",
+    "PlannedEvent",
+    "RandomHymn",
     "Rest",
     "Score",
     "SungNote",
@@ -29,6 +32,8 @@ __all__ = [
     "TimedSection",
     "build_score",
     "pitch_at",
+    "random_hymn",
+    "random_settings",
     "sample_count",
     "true_values",
     "truth_of",
