@@ -44,6 +44,18 @@ class MotifUse:
     shift: int
     start_level: int
     shape: tuple[tuple[Move | None, str, Fraction], ...]  # (move, kind, length) per event
+    first_event: int  # index into Flat.events
+    end_event: int  # exclusive
+
+
+@dataclass(frozen=True)
+class RepeatUse:
+    """One repeat, spanning all its copies."""
+
+    count: int
+    step: int
+    first_event: int
+    end_event: int  # exclusive
 
 
 @dataclass(frozen=True)
@@ -51,12 +63,13 @@ class Flat:
     events: tuple[FlatEvent, ...]
     end_level: int
     motifs: tuple[MotifUse, ...]
+    repeats: tuple[RepeatUse, ...]  # outer before inner, like motifs
 
 
 def flatten(items: tuple[Item, ...], start_level: int = 0) -> Flat:
     walk = _Walk(start_level)
     walk.items(items, lyrics=True)
-    return Flat(tuple(walk.events), walk.level, tuple(walk.motifs))
+    return Flat(tuple(walk.events), walk.level, tuple(walk.motifs), tuple(walk.repeats))
 
 
 class _Walk:
@@ -65,6 +78,7 @@ class _Walk:
         self.pending: Move | None = None  # the move waiting for the next note
         self.events: list[FlatEvent] = []
         self.motifs: list[MotifUse] = []
+        self.repeats: list[RepeatUse] = []
 
     def items(self, items: tuple[Item, ...], lyrics: bool) -> None:
         for item in items:
@@ -100,20 +114,25 @@ class _Walk:
                 self.motif(item, lyrics)
 
     def repeat(self, repeat: Repeat, lyrics: bool) -> None:
-        start = self.level
+        slot = len(self.repeats)
+        self.repeats.append(None)  # type: ignore[arg-type]  # filled below, so outer repeats come first
+        first, start = len(self.events), self.level
         for copy in range(repeat.count):
             if copy:
                 needed = start + copy * repeat.step - self.level
                 self.level += needed
                 self.pending = Move(False, needed) if needed else None
             self.items(repeat.items, lyrics and copy == 0)
+        self.repeats[slot] = RepeatUse(repeat.count, repeat.step, first, len(self.events))
 
     def motif(self, motif: Motif, lyrics: bool) -> None:
         slot = len(self.motifs)
         self.motifs.append(None)  # type: ignore[arg-type]  # filled below, so outer motifs come first
         first, start = len(self.events), self.level
         self.items(motif.items, lyrics)
-        self.motifs[slot] = MotifUse(motif.label, motif.shift, start, _shape(self.events[first:]))
+        self.motifs[slot] = MotifUse(
+            motif.label, motif.shift, start, _shape(self.events[first:]), first, len(self.events)
+        )
 
 
 def _shape(events: list[FlatEvent]) -> tuple[tuple[Move | None, str, Fraction], ...]:

@@ -1,7 +1,7 @@
 from fractions import Fraction
 
 from hymnstring.notation import Move, parse_line
-from hymnstring.notation.flatten import FlatNote, FlatPause, MotifUse, flatten
+from hymnstring.notation.flatten import FlatNote, FlatPause, MotifUse, RepeatUse, flatten
 
 DEMO = (
     "p1 ltr: #1[A:2 ^ 1 v 1] ^ lē:~2 .2 v (lou:1)x3^ >1{i:*} a:2 !v2 "
@@ -119,7 +119,7 @@ def test_motifs_are_listed_in_order_with_start_level_and_shape():
     result = flat("#1[2 ^ 1] v #1+1[(1)x2 ^ 1]")
 
     assert result.motifs == (
-        MotifUse(1, 0, 0, ((None, "note", Fraction(2)), (Move(False, 1), "note", Fraction(1)))),
+        MotifUse(1, 0, 0, ((None, "note", Fraction(2)), (Move(False, 1), "note", Fraction(1))), 0, 2),
         MotifUse(
             1, 1, 0,
             (
@@ -127,6 +127,8 @@ def test_motifs_are_listed_in_order_with_start_level_and_shape():
                 (None, "note", Fraction(1)),
                 (Move(False, 1), "note", Fraction(1)),
             ),
+            2,
+            5,
         ),
     )
 
@@ -155,3 +157,27 @@ def test_flatten_and_its_types_are_exported_from_the_package():
     for name in ("flatten", "Flat", "FlatNote", "FlatPause", "FlatEvent", "MotifUse"):
         assert name in notation.__all__
         assert hasattr(notation, name)
+
+
+def test_demo_spans_cover_the_events_of_each_motif_and_repeat():
+    result = flatten(parse_line(DEMO).items)
+
+    assert [(m.first_event, m.end_event) for m in result.motifs] == [(0, 3), (10, 13)]
+    assert result.repeats == (RepeatUse(3, 1, 5, 8),)
+
+
+def test_a_repeat_around_motifs_spans_all_its_copies_and_each_copy_has_its_own_motif_span():
+    result = flat("(#1[1 ^ 1])x2")
+
+    assert [(m.first_event, m.end_event) for m in result.motifs] == [(0, 2), (2, 4)]
+    assert result.repeats == (RepeatUse(2, 0, 0, 4),)
+
+
+def test_a_repeat_inside_a_repeat_appears_once_per_outer_copy_and_outer_comes_first():
+    result = flat("((1)x2 ^ 1)x2")
+
+    assert result.repeats == (
+        RepeatUse(2, 0, 0, 6),
+        RepeatUse(2, 0, 0, 2),
+        RepeatUse(2, 0, 3, 5),
+    )

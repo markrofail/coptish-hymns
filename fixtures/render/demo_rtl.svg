@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="710" height="312" viewBox="0 0 355 156" role="img" font-family="-apple-system, 'Helvetica Neue', Helvetica, Arial, 'Noto Sans Coptic', sans-serif">
+<title>Phrase p1</title>
+<rect width="355" height="156" fill="#ffffff"/>
+<g fill="none" stroke-linecap="round" stroke-linejoin="round">
+<path class="stretch" d="M315 94 L296 94" stroke="#7F77DD" stroke-width="3"/>
+<path class="slope" d="M296 94 C293 94 293 74 290 74" stroke="#7F77DD" stroke-width="3"/>
+<path class="stretch" d="M290 74 L283.5 74" stroke="#7F77DD" stroke-width="3"/>
+<path class="slope" d="M283.5 74 C280.5 74 280.5 94 277.5 94" stroke="#7F77DD" stroke-width="3"/>
+<path class="stretch" d="M277.5 94 L271 94" stroke="#7F77DD" stroke-width="3"/>
+<path class="slope" d="M271 94 C268 94 268 74 265 74" stroke="#1D9E75" stroke-width="3"/>
+<path class="wave" d="M265 74 Q263.5 67 262 74 T259 74 T256 74 T253 74 T250 74 T247 74 T244 74 T241 74 L240 74" stroke="#1D9E75" stroke-width="3"/>
+<path class="pause" d="M240 74 L221 74" stroke="#888780" stroke-width="1.5" stroke-dasharray="0.5 4"/>
+<path class="slope" d="M221 74 C218 74 218 94 215 94" stroke="#1D9E75" stroke-width="3"/>
+<path class="stretch" d="M215 94 L208.5 94" stroke="#1D9E75" stroke-width="3"/>
+<path class="slope" d="M208.5 94 C205.5 94 205.5 74 202.5 74" stroke="#1D9E75" stroke-width="3"/>
+<path class="stretch" d="M202.5 74 L196 74" stroke="#1D9E75" stroke-width="3"/>
+<path class="slope" d="M196 74 C193 74 193 54 190 54" stroke="#1D9E75" stroke-width="3"/>
+<path class="stretch" d="M190 54 L177.5 54" stroke="#1D9E75" stroke-width="3"/>
+<path class="fast" d="M177.5 54 L165 54" stroke="#1D9E75" stroke-width="1.5" stroke-dasharray="3 2.5" stroke-linecap="butt"/>
+<path class="stretch" d="M165 54 L140 54" stroke="#1D9E75" stroke-width="3"/>
+<path class="corner" d="M140 54 L140 94" stroke="#1D9E75" stroke-width="3"/>
+<path class="stretch" d="M140 94 L121 94" stroke="#7F77DD" stroke-width="3"/>
+<path class="slope" d="M121 94 C118 94 118 74 115 74" stroke="#7F77DD" stroke-width="3"/>
+<path class="stretch" d="M115 74 L108.5 74" stroke="#7F77DD" stroke-width="3"/>
+<path class="slope" d="M108.5 74 C105.5 74 105.5 94 102.5 94" stroke="#7F77DD" stroke-width="3"/>
+<path class="stretch" d="M102.5 94 L96 94" stroke="#7F77DD" stroke-width="3"/>
+<path class="slope" d="M96 94 C93 94 93 114 90 114" stroke="#1D9E75" stroke-width="3"/>
+<path class="stretch" d="M90 114 L40 114" stroke="#1D9E75" stroke-width="3"/>
+</g>
+<circle class="bead" cx="315" cy="94" r="3" fill="#7F77DD"/>
+<circle class="bead" cx="290" cy="74" r="3" fill="#7F77DD"/>
+<circle class="bead" cx="277.5" cy="94" r="3" fill="#7F77DD"/>
+<circle class="bead" cx="265" cy="74" r="3" fill="#1D9E75"/>
+<circle class="bead" cx="215" cy="94" r="3" fill="#1D9E75"/>
+<circle class="bead" cx="202.5" cy="74" r="3" fill="#1D9E75"/>
+<circle class="bead" cx="190" cy="54" r="3" fill="#1D9E75"/>
+<circle class="bead" cx="177.5" cy="54" r="3" fill="#1D9E75"/>
+<circle class="bead" cx="165" cy="54" r="3" fill="#1D9E75"/>
+<circle class="bead" cx="140" cy="94" r="3" fill="#7F77DD"/>
+<circle class="bead" cx="115" cy="74" r="3" fill="#7F77DD"/>
+<circle class="bead" cx="102.5" cy="94" r="3" fill="#7F77DD"/>
+<circle class="bead" cx="90" cy="114" r="3" fill="#1D9E75"/>
+<g class="breath"><circle cx="227.5" cy="58" r="2.5" fill="#5F5E5A"/><path d="M225.2 58.5 Q224.7 63.5 228.7 66.5" fill="none" stroke="#5F5E5A" stroke-width="1.5" stroke-linecap="round"/></g>
+<text class="motif-label" x="290" y="62" text-anchor="middle" font-size="12" fill="#5F5E5A">①</text>
+<text class="motif-label" x="115" y="62" text-anchor="middle" font-size="12" fill="#5F5E5A">①</text>
+<path class="repeat-bracket" d="M215 38 L215 32 L177.5 32 L177.5 38" fill="none" stroke="#5F5E5A" stroke-width="1"/>
+<text class="repeat-label" x="196.25" y="24" text-anchor="middle" font-size="12" fill="#5F5E5A">×3 ↖</text>
+<text class="lyric" x="315" y="142" text-anchor="end" direction="rtl" font-size="14" fill="#2C2C2A">A</text>
+<text class="lyric" x="265" y="142" text-anchor="end" direction="rtl" font-size="14" fill="#2C2C2A">lē</text>
+<text class="lyric" x="215" y="142" text-anchor="end" direction="rtl" font-size="14" fill="#2C2C2A">lou</text>
+<text class="lyric" x="177.5" y="142" text-anchor="end" direction="rtl" text-decoration="underline" font-size="14" fill="#2C2C2A">i</text>
+<text class="lyric" x="165" y="142" text-anchor="end" direction="rtl" font-size="14" fill="#2C2C2A">a</text>
+<text class="vowel" x="140" y="142" text-anchor="end" direction="rtl" font-size="12" fill="#5F5E5A">(a)</text>
+</svg>
