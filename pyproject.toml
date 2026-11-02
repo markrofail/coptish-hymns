@@ -7,7 +7,10 @@ name = "hymnstring"
 version = "0.0.0"
 description = "Turns a recording of a Coptic hymn and its text into string notation."
 requires-python = ">=3.11,<3.13"
-dependencies = ["pydantic==2.14.2"]
+dependencies = [
+    "pydantic==2.14.2",
+    "numpy==1.26.4",  # stays on 1.x because torch 2.2.2 is built against it
+]
 
 [project.optional-dependencies]
 dev = ["pytest==8.4.2"]

@@ -1,5 +1,6 @@
 """Expands items into flat events with levels, the way the synthesiser and checks read them."""
 
+from collections.abc import Callable, Iterator
 from dataclasses import dataclass
 from fractions import Fraction
 from typing import Literal
@@ -7,11 +8,13 @@ from typing import Literal
 from hymnstring.notation.model import (
     Bead,
     Fast,
+    Hymn,
     Item,
     Motif,
     Move,
     Note,
     Pause,
+    Phrase,
     Repeat,
     Syllable,
     Vowel,
@@ -66,10 +69,38 @@ class Flat:
     repeats: tuple[RepeatUse, ...]  # outer before inner, like motifs
 
 
+@dataclass(frozen=True)
+class ChainedPhrase:
+    """A phrase flattened at its place in its chain: level 0 is where the chain starts."""
+
+    index: int  # the phrase's position in the hymn
+    phrase: Phrase
+    chain: int  # counts from 0
+    flat: Flat
+
+
 def flatten(items: tuple[Item, ...], start_level: int = 0) -> Flat:
     walk = _Walk(start_level)
     walk.items(items, lyrics=True)
     return Flat(tuple(walk.events), walk.level, tuple(walk.motifs), tuple(walk.repeats))
+
+
+def walk_chains(
+    hymn: Hymn, items_of: Callable[[Phrase], tuple[Item, ...]] = lambda phrase: phrase.items
+) -> Iterator[ChainedPhrase]:
+    """Each phrase in order, flattened on the level its join leads to. The first phrase, or one with
+    no join, starts a new chain at level 0. A move join adds its change to where the last phrase
+    ended, which after a trailing pause is the level the pause held. `=` adds nothing."""
+    chain, end_level = -1, 0
+    for index, phrase in enumerate(hymn.phrases):
+        if index == 0 or phrase.join is None:
+            chain += 1  # no join, so no shared level: a new chain with its own level 0
+            start = 0
+        else:
+            start = end_level + (phrase.join.change if isinstance(phrase.join, Move) else 0)
+        flat = flatten(items_of(phrase), start)
+        end_level = flat.end_level
+        yield ChainedPhrase(index, phrase, chain, flat)
 
 
 class _Walk:
