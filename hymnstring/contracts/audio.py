@@ -43,6 +43,8 @@ class Voice(Contract):
 
 
 class Vibrato(TimeSpan):
+    """width_cents is peak to peak, so a width of 100 swings the pitch 50 cents either side of the note."""
+
     rate_hz: Positive
     width_cents: Positive
 

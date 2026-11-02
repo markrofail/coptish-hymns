@@ -14,6 +14,7 @@ from hymnstring.synth.score import (
     build_score,
     sample_count,
 )
+from hymnstring.synth.truth import pitch_at, true_values, truth_of
 
 __all__ = [
     "CYMBALS",
@@ -27,5 +28,8 @@ __all__ = [
     "TIMING",
     "TimedSection",
     "build_score",
+    "pitch_at",
     "sample_count",
+    "true_values",
+    "truth_of",
 ]
