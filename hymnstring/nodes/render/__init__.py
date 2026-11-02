@@ -3,15 +3,18 @@
 from pathlib import Path
 
 from hymnstring.contracts import RenderedPage, RenderInput
-from hymnstring.harness import Node
+from hymnstring.harness import ContractError, Node
 from hymnstring.notation import parse_hymn, render_hymn
 
 
 def run(given: RenderInput) -> RenderedPage:
     page = render_hymn(parse_hymn(given.string.text))
     out = Path(given.out_path)
-    out.parent.mkdir(parents=True, exist_ok=True)
-    out.write_text(page, encoding="utf-8")
+    try:
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_text(page, encoding="utf-8")
+    except OSError as error:
+        raise ContractError(f"render: cannot write out_path {given.out_path!r}: {error}") from error
     return RenderedPage(html_path=given.out_path)
 
 

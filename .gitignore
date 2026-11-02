@@ -27,3 +27,7 @@ __pycache__/
 *.pth
 *.ckpt
 *.safetensors
+
+# Pipeline working folders
+work/
+out/

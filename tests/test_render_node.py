@@ -46,3 +46,15 @@ def test_empty_out_path_is_a_contract_error():
     done = run_render(payload)
 
     assert done.returncode == 2
+    assert "out_path" in done.stderr
+
+
+def test_an_unwritable_out_path_is_a_contract_error_and_not_a_traceback(tmp_path):
+    payload = json.loads(FIXTURE.read_text(encoding="utf-8"))
+    payload["out_path"] = str(tmp_path)  # an existing folder
+
+    done = run_render(payload)
+
+    assert done.returncode == 2
+    assert "Traceback" not in done.stderr
+    assert str(tmp_path) in done.stderr
