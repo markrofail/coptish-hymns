@@ -379,3 +379,22 @@ def test_every_rule_example_page_snapshot():
     lines = [f"p{n} ltr: {text}" for n, text in enumerate(RULES, 1)]
     lines.append("p15 rtl: آ:2 ^ مين:2")
     check_snapshot("rules.html", render_hymn(parse_hymn("\n".join(lines))))
+
+
+# --- repeat feet clear of the string around the repeat ----------------------
+
+
+@pytest.mark.parametrize(
+    "text, left, right, bead",
+    [
+        ("(1)x3 ^ 1", 40, 77.5, 3),  # the string climbs to the next note at the right foot
+        ("1 !v3 (1)x2", 52.5, 77.5, 0),  # a corner drops onto the first note at the left foot
+        ("1 ^ (1)x2 v 1", 52.5, 77.5, 1),  # a lower note after it changes nothing
+    ],
+)
+def test_a_repeat_bracket_clears_the_string_beside_it(text, left, right, bead):
+    root = draw(text)
+    (bracket,) = find(root, "repeat-bracket")
+    highest = beads(root)[bead][1]  # the highest level beside the repeat
+
+    assert numbers(bracket) == [left, highest - 16, left, highest - 22, right, highest - 22, right, highest - 16]

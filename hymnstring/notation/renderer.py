@@ -149,8 +149,8 @@ class _Drawing:
         """Breaths, then motifs, then repeats, smaller first. Each rises over what it overlaps."""
         placed, marks = [], []
 
-        def put(kind, first, end, x0, x1, height, **fields):
-            base = min(self.ys[first:end])
+        def put(kind, first, end, x0, x1, height, beside=(), **fields):
+            base = min([*self.ys[first:end], *beside])
             for left, right, top in placed:
                 if left < x1 and x0 < right:
                     base = min(base, top)
@@ -168,10 +168,16 @@ class _Drawing:
         for r in sorted(self.flat.repeats, key=lambda r: r.end_event - r.first_event):
             arrows = ("↖", "↙") if self.rtl else ("↗", "↘")
             more = f" {arrows[r.step < 0]}{abs(r.step) if abs(r.step) > 1 else ''}" if r.step else ""
-            self.put_label(put, "repeat", r.first_event, r.end_event, f"×{r.count}{more}", 42)
+            beside = []  # levels the feet could hit: the note after, and the one a corner drops from
+            if r.end_event < len(self.events) and isinstance(self.events[r.end_event], FlatNote):
+                beside.append(self.ys[r.end_event])
+            first = self.events[r.first_event]
+            if r.first_event and isinstance(first, FlatNote) and first.move and first.move.abrupt:
+                beside.append(self.ys[r.first_event - 1])
+            self.put_label(put, "repeat", r.first_event, r.end_event, f"×{r.count}{more}", 42, beside)
         return marks
 
-    def put_label(self, put, kind, first, end, text, height):
+    def put_label(self, put, kind, first, end, text, height, beside=()):
         x0, x1 = self.xs[first], self.xs[end]
         half = float(_text_width(text, LABEL_SIZE)) / 2
         centre = (x0 + x1) / 2
@@ -179,7 +185,7 @@ class _Drawing:
             x0, x1 = min(x0, centre - half), max(x1, centre + half)
         else:
             x0, x1 = centre - half, centre + half
-        put(kind, first, end, x0, x1, height, text=text, centre=centre, bracket=(self.xs[first], self.xs[end]))
+        put(kind, first, end, x0, x1, height, beside, text=text, centre=centre, bracket=(self.xs[first], self.xs[end]))
 
     def annotation(self, mark: dict) -> str:
         base, kind = mark["base"], mark["kind"]
