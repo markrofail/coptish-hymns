@@ -89,6 +89,16 @@ CASES = [
         "p1 ltr: #1[2]\np2 ltr: #1+1[2] #1+2[2]",
         [("motif_level", "p2")],
     ),
+    (
+        "a copy of a motif of moves is two bracket problems, and it starts a level higher",
+        "p1 ltr: #1[^] [...]#1",
+        [("bracket_edge", "p1"), ("bracket_edge", "p1"), ("motif_level", "p1")],
+    ),
+    (
+        "a copy of a motif that repeats a move is the same",
+        "p1 ltr: #1[(^)x2] [...]#1",
+        [("bracket_edge", "p1"), ("bracket_edge", "p1"), ("motif_level", "p1")],
+    ),
     ("problems come in phrase order", "p1 ltr: 1 ^\np2 ltr: 1 ^ ^ 1", [("phrase_end", "p1"), ("move_follower", "p2")]),
 ]
 

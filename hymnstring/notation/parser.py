@@ -22,7 +22,8 @@ from hymnstring.notation.model import (
 
 MAX_DEPTH = 50  # brackets nested deeper than this are an error, not a stack overflow
 MAX_DIGITS = 9
-MAX_EVENTS = 10_000  # notes and pauses a phrase may expand to, so a repeat cannot fill memory
+MAX_EVENTS = 10_000  # notes, pauses and moves a phrase may expand to: all that flatten walks
+MAX_HYMN_EVENTS = 100_000  # the same, summed over a hymn
 
 MOVE_UP = "^↑"
 MOVE_DOWN = "v↓"
@@ -55,9 +56,13 @@ def parse_hymn(text: str) -> Hymn:
     seen: dict[int, Motif] = {}
     known: dict[int, int] = {}
     phrases = []
+    total = 0
     for number, line in enumerate(lines, start=1):
         try:
             phrases.append(_parse_phrase(line, seen, known))
+            total += _events(phrases[-1].items, known)
+            if total > MAX_HYMN_EVENTS:
+                raise NotationError(f"a hymn can expand to at most {MAX_HYMN_EVENTS} notes, pauses and moves")
         except NotationError as error:
             raise NotationError(f"line {number}: {error}") from None
     return Hymn(tuple(phrases))
@@ -73,17 +78,18 @@ def _is_letter(char: str) -> bool:
 
 
 def _events(items: tuple[Item, ...], known: dict[int, int]) -> int:
-    """Notes and pauses once repeats are expanded, counted without expanding them.
+    """Notes, pauses, beads and moves once repeats are expanded, counted without expanding
+    them. The joins between a repeat's copies count as nothing, since a body is never empty.
 
     Stops as soon as the total passes the cap, and takes a registered motif's count from
     `known` (keyed by id), so a motif that copies motifs is not walked copy by copy."""
     total = 0
     for item in items:
         match item:
-            case Note() | Pause():
+            case Note() | Pause() | Move():
                 total += 1
             case Fast():
-                total += sum(isinstance(i, Bead) for i in item.items)
+                total += len(item.items)
             case Repeat():
                 total += item.count * _events(item.items, known)
             case Motif():
@@ -191,7 +197,7 @@ class _Parser:
         if not items:
             raise self.fail("a phrase needs at least one item after its join")
         if _events(items, self.known) > MAX_EVENTS:
-            raise self.fail(f"a phrase can expand to at most {MAX_EVENTS} notes and pauses", 0)
+            raise self.fail(f"a phrase can expand to at most {MAX_EVENTS} notes, pauses and moves", 0)
         return Phrase(header.group(1), header.group(2), join, items)
 
     def after_item(self, closer: str | None) -> None:
@@ -428,7 +434,7 @@ class _Parser:
         self.pos += 1
         events = _events(body, self.known)
         if events > MAX_EVENTS:
-            raise self.fail(f"a motif can expand to at most {MAX_EVENTS} notes and pauses", open_at)
+            raise self.fail(f"a motif can expand to at most {MAX_EVENTS} notes, pauses and moves", open_at)
         if label not in self.seen:
             first = Motif(label, 0, _strip(body, self.known))
             self.seen[label] = first
@@ -443,6 +449,4 @@ class _Parser:
         label = self.label()
         if label not in self.seen:
             raise self.fail(f"no earlier occurrence of motif {label} to copy", start)
-        if not self.known[id(self.seen[label])]:
-            raise self.fail(f"motif {label} has no notes or pauses to copy", start)
         return self.seen[label]

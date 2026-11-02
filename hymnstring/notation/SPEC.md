@@ -15,7 +15,7 @@ p1 ltr: #1[A:2 ^ 1 v 1] ^ lē:~2 .2 v (lou:1)x3^ >1{i:*} a:2 !v2 #1[(a):2 ^ 1 v 
 Six rules make it work:
 
 1. **One line per phrase.** `p1` is the phrase id and `ltr` or `rtl` the direction. Tokens follow in reading order, one space apart.
-2. **Numbers are lengths** in half-note units: half = 1, full = 2, double = 4. Any whole number is allowed, but a phrase can expand to at most 10,000 notes and pauses. Each section of a hymn has its own unit.
+2. **Numbers are lengths** in half-note units: half = 1, full = 2, double = 4. Any whole number is allowed, but a phrase can expand to at most 10,000 notes, pauses and moves, and a hymn to at most 100,000. Joins between a repeat's copies are not counted. Each section of a hymn has its own unit.
 3. **Every written note is one bead.** A repeat writes its notes once, and its copies add the rest. Two notes with no move between them are a re-sung note on the same level, so same-level repeats need no sign of their own.
 4. **Levels are never written.** Moves say up or down, and levels are worked out from them, with the phrase's lowest note as level 0. The text has no pitch names, semitones, seconds or BPM.
 5. **Brackets label notes, and a repeat holds one copy.** A motif bracket only labels notes. A repeat bracket writes its body once, with a count, so the text can have fewer tokens than the drawing has beads. Remove the brackets and expand the repeats, and you have the flat list of notes the synthesiser and round-trip check use.
@@ -103,7 +103,7 @@ p3 ltr: #1[2 ^ 1] 4
 
 ### Motif copies
 
-A later `[...]#1` with no notes inside, whose label comes after the bracket, copies the first occurrence's shape without its lyrics. The three dots are written as they are. `[...]①` is the hazzat form. It is resolved when the hymn is parsed, across phrases, and the writer outputs the full canonical occurrence, such as `#1[2 ^ 1 v 1]`. It is a plain occurrence, so it starts on the same level as the other plain ones. With no earlier occurrence of the label it is an error. A motif with no notes or pauses has nothing to copy, so copying one is an error too. There is no shifted form of it.
+A later `[...]#1` with no notes inside, whose label comes after the bracket, copies the first occurrence's shape without its lyrics. The three dots are written as they are. `[...]①` is the hazzat form. It is resolved when the hymn is parsed, across phrases, and the writer outputs the full canonical occurrence, such as `#1[2 ^ 1 v 1]`. It is a plain occurrence, so it starts on the same level as the other plain ones. With no earlier occurrence of the label it is an error. There is no shifted form of it.
 
 Example: `#1[2 ^ 1] v 2 [...]#1` is written back as `#1[2 ^ 1] v 2 #1[2 ^ 1]`, the second motif at the same level as the first.
 
@@ -180,7 +180,7 @@ Three details come from `reference/string_demo.svg`, which is otherwise only a s
 
 The validator rejects a string when:
 
-1. It has an unknown token, or a length, move size, repeat level step or shift below 1, or a repeat count below 2, or a phrase that expands to more than 10,000 notes and pauses. A bare `!` and `=` are the only moves with no size.
+1. It has an unknown token, or a length, move size, repeat level step or shift below 1, or a repeat count below 2, or a phrase that expands to more than 10,000 notes, pauses and moves, or a hymn to more than 100,000. A bare `!` and `=` are the only moves with no size.
 2. The first phrase of the hymn has a join, or `=` appears anywhere but as a phrase's join.
 3. A phrase, after its join, starts with a pause or a move, or ends on a move. A join is followed by a note, a fast group, or a bracket that starts with one.
 4. A move is followed by another move or a pause, so there is at most one move between two notes. The join counts as the move before the phrase's first note.
@@ -188,7 +188,7 @@ The validator rejects a string when:
 6. A fast group holds anything but `*` notes and moves, or a `*` appears outside one.
 7. Two occurrences of a motif differ in shape, anywhere in the hymn, after expanding repeats.
 8. Within a chain, a plain motif starts on a different level from another plain occurrence, or a shifted one isn't that many levels from the plain ones in that chain, or, with no plain one in the chain, from the other shifted ones.
-9. A shifted motif comes before the motif's first plain occurrence in the hymn, or has a shift of 0. A `[...]` copy has no earlier occurrence of its label, copies a motif with no notes or pauses, or has a shift.
+9. A shifted motif comes before the motif's first plain occurrence in the hymn, or has a shift of 0. A `[...]` copy has no earlier occurrence of its label, or has a shift.
 10. A motif sits inside a repeat that changes level (`^` or `v`).
 11. A lyric isn't NFC, or contains anything but letters, combining marks and the letter marks above.
 

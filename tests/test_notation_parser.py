@@ -1,3 +1,4 @@
+import json
 import random
 import re
 import subprocess
@@ -23,10 +24,13 @@ from hymnstring.notation import (
     Vowel,
     parse_hymn,
     parse_line,
+    flatten,
     validate,
     write_hymn,
     write_line,
 )
+
+from hymnstring.notation.parser import MAX_EVENTS
 
 SPEC = Path(__file__).parents[1] / "hymnstring" / "notation" / "SPEC.md"
 HAS_PREFIX = re.compile(r"^p\d+ (ltr|rtl): ")
@@ -324,9 +328,10 @@ REJECTS = [
     "p1 ltr: (((1)x100)x100)x2",
     "p1 ltr: " + "(" * 9 + "1" + ")x10" * 9,
     "p1 ltr: #1[(1)x6000] [...]#1",
-    # a motif with no notes or pauses has nothing to copy
-    "p1 ltr: #1[^] [...]#1",
-    "p1 ltr: #1[(^)x2] [...]#1",
+    # moves count too, so a repeat of moves is bounded like any other
+    "p1 ltr: (1 ^)x5001",
+    "p1 ltr: 1 (^)x3000000v 1",
+    "p1 ltr: ((^)x30000)x30000v",
     # a phrase id is letters, digits, _ and -
     "p.1 ltr: 1",
     "a:b ltr: 1",
@@ -406,9 +411,65 @@ def test_motifs_that_copy_motifs_end_in_notation_error_quickly():
     assert parse_in_a_subprocess(doubling_line(40)) == "NotationError"
 
 
-def test_copies_of_a_motif_with_no_notes_are_rejected_at_once():
+def test_copies_of_a_motif_of_moves_are_stopped_by_the_cap():
     with pytest.raises(NotationError):
         parse_hymn(doubling_line(40, first="^"))
+
+
+def test_a_motif_of_moves_can_be_copied_and_the_validator_reports_it():
+    assert len(parse_hymn("p1 ltr: #1[^] [...]#1").phrases[0].items) == 2
+
+
+def test_a_hymn_at_the_limit_parses_and_one_more_note_does_not():
+    ten = "\n".join(f"p{n} ltr: (1)x10000" for n in range(1, 11))
+
+    assert len(parse_hymn(ten).phrases) == 10
+    with pytest.raises(NotationError, match="line 11"):
+        parse_hymn(ten + "\np11 ltr: 1")
+
+
+def test_parse_line_has_no_hymn_limit():
+    assert parse_line("p1 ltr: (1)x10000").items[0].count == 10000
+
+
+def parse_as_a_hymn_string(notations):
+    """What HymnString.model_validate makes of these phrases, run apart so a hang fails."""
+    code = (
+        "import json, sys\n"
+        "from pydantic import ValidationError\n"
+        "from hymnstring.contracts import HymnString\n"
+        "phrases = [{'phrase_id': f'p{n}', 'direction': 'ltr', 'notation': t}\n"
+        "           for n, t in enumerate(json.loads(sys.argv[1]), start=1)]\n"
+        "try:\n"
+        "    HymnString.model_validate({'format_version': 1, 'phrases': phrases})\n"
+        "except ValidationError:\n"
+        "    print('rejected')\n"
+        "else:\n"
+        "    print('accepted')\n"
+    )
+    done = subprocess.run(
+        [sys.executable, "-c", code, json.dumps(notations)],
+        capture_output=True,
+        text=True,
+        timeout=20,
+        cwd=SPEC.parents[2],
+    )
+    assert done.returncode == 0, done.stderr
+    return done.stdout.strip()
+
+
+@pytest.mark.parametrize(
+    "notations",
+    [
+        ["1 (^)x3000000v 1"],
+        ["1 (^)x900000000v 1"],
+        ["((^)x30000)x30000v"],
+        ["(1)x10000^"] * 300,
+    ],
+    ids=["moves x3000000", "moves x900000000", "moves 30000 by 30000", "300 phrases"],
+)
+def test_work_past_the_limits_is_rejected_quickly_as_a_hymn_string(notations):
+    assert parse_as_a_hymn_string(notations) == "rejected"
 
 
 def test_motifs_that_copy_motifs_still_parse_within_the_cap():
@@ -417,7 +478,7 @@ def test_motifs_that_copy_motifs_still_parse_within_the_cap():
 
 FRAGMENTS = [
     "1", "2", "~2", ".2", "^", "v2", "!", "!v", "(1)x2", "(1 ^ 1)x3^", "#1[1]", "#1[2 ^ 1]",
-    ">2{* ^ *}", "ⲁ:2", "(ⲁ):2", "[...]#1", "#1+1[1]", "=", "(1)x2v",
+    ">2{* ^ *}", "(^)x999v", "(1)x9999^", "((1)x99)x99", "ⲁ:2", "(ⲁ):2", "[...]#1", "#1+1[1]", "=", "(1)x2v",
 ]
 NOISE = list("12^v!=.~*(){}[]#+-x:<>a ①↑↝→•×↗") + ["[...]", "#1[", ")x2", ">1{", "lou:", "\n"]
 
@@ -436,6 +497,8 @@ def test_arbitrary_input_never_raises_anything_but_notation_error():
         except NotationError:
             continue
         parsed += 1
+        for phrase in hymn.phrases:
+            assert len(flatten(phrase.items).events) <= MAX_EVENTS
         assert parse_hymn(write_hymn(hymn)) == hymn
         validate(hymn)
     assert parsed >= 500
