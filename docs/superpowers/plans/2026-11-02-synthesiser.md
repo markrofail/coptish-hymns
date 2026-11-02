@@ -23,8 +23,7 @@
 - Follow TDD. Expected values are hand-derived literals or come from `random_hymns.py`'s plan. A test must never get its expected value from the code it checks.
 - Match the surrounding code: short module docstrings, the comment density of `hymnstring/harness.py`, frozen dataclasses, no speculative options.
 - The whole suite stays under 60 s. If it doesn't, make the measuring cheaper; never drop seeds.
-- End every commit message with exactly these two lines:
-  `Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>`
+- End every commit message with a `Co-Authored-By:` line naming the model that wrote the commit, as your own attribution instructions give it, followed by exactly this line:
   `Claude-Session: https://claude.ai/code/session_01G42KT8b6fHhNgrLamjj7z1`
 
 ## How a string becomes sound
@@ -41,7 +40,7 @@ These rules are numbered so tasks, tests and reviews can cite them.
 **Levels and pitch**
 
 5. A note's hymn level is its chain level (from `walk_chains`) plus its chain's offset. Keep `known`, a dict from motif label to the hymn level of its plain occurrences. For each chain in order: the first motif use in the chain whose label is in `known` sets `offset = known[label] + use.shift - use.start_level`; with none, `offset = 0`. Then, for every use in the chain in order, `known.setdefault(label, offset + use.start_level - use.shift)`. This keeps a motif at one pitch across chains, which the round-trip check will compare. If two motifs in a chain disagree, the first one wins.
-6. Cents grow one section at a time, so a rise is always a rise. Section 0 has `origin_level = 0` and `origin_cents = 0`. Each later section takes `origin_level` from the hymn level of the previous section's last note, and `origin_cents` from that note's cents. Within a section, `raw_cents = origin_cents + (level - origin_level) * step_cents`.
+6. Cents grow one section at a time, so a rise is always a rise. Section 0 has `origin_level = 0` and `origin_cents = 0`. Each later section takes `origin_level` from the hymn level of the previous section's last note, and `origin_cents` from that note's `raw_cents`. A section with no notes keeps the origin it was given. Within a section, `raw_cents = origin_cents + (level - origin_level) * step_cents`.
 7. `SungNote.cents` is `raw_cents` minus the lowest `raw_cents` in the hymn, so a note's pitch is `base_hz * 2 ** (cents / 1200)` and `base_hz` is the hymn's lowest note.
 8. The highest pitch reached must stay under half the sample rate: `log2(base_hz) + (max_cents + vibrato_width_cents / 2 + max(0, drift_cents_per_min) * end_seconds / 60) / 1200 < log2(sample_rate_hz / 2)`, checked in logs so that a huge level can't overflow. Otherwise `build_score` raises `SynthError` naming the sample rate.
 
