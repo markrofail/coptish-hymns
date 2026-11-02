@@ -1,6 +1,18 @@
-"""Render: draws the string view, synced to the audio."""
+"""Render: turns the string into an HTML page and writes it to `out_path`. The audio sync comes in Phase 3."""
 
-from hymnstring.contracts import RenderInput, RenderedPage
-from hymnstring.harness import Node, not_built
+from pathlib import Path
 
-NODE = Node("render", RenderInput, RenderedPage, not_built)
+from hymnstring.contracts import RenderedPage, RenderInput
+from hymnstring.harness import Node
+from hymnstring.notation import parse_hymn, render_hymn
+
+
+def run(given: RenderInput) -> RenderedPage:
+    page = render_hymn(parse_hymn(given.string.text))
+    out = Path(given.out_path)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(page, encoding="utf-8")
+    return RenderedPage(html_path=given.out_path)
+
+
+NODE = Node("render", RenderInput, RenderedPage, run)

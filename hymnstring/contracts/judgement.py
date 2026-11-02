@@ -42,9 +42,14 @@ class HymnString(Contract):
             raise ValueError("phrase ids must be unique")
         return self
 
+    @property
+    def text(self) -> str:
+        """The text form: one `id dir: notation` line per phrase."""
+        return "\n".join(f"{p.phrase_id} {p.direction}: {p.notation}" for p in self.phrases)
+
     @model_validator(mode="after")
     def notation_is_canonical_and_valid(self) -> Self:
-        text = "\n".join(f"{p.phrase_id} {p.direction}: {p.notation}" for p in self.phrases)
+        text = self.text
         hymn = parse_hymn(text)  # a NotationError is a ValueError, so pydantic reports it
         if write_hymn(hymn) != text:
             raise ValueError("notation must be written in canonical form")

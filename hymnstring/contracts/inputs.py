@@ -14,7 +14,7 @@ from hymnstring.contracts.audio import (
     SyllableTimes,
     Voice,
 )
-from hymnstring.contracts.base import Contract
+from hymnstring.contracts.base import Contract, NonEmpty
 from hymnstring.contracts.judgement import HymnString, LibraryEntry, Patterns, RoundTripReport
 from hymnstring.contracts.text import PreparedText, Sounds
 
@@ -95,9 +95,10 @@ class RoundTripInput(Contract):
 
 
 class RenderInput(Contract):
-    """Only the string is required; the rest adds the audio sync and the check results."""
+    """The string and `out_path` are used now. `report`, `recording` and `syllable_times` are for the player in Phase 3 and aren't used yet."""
 
     string: HymnString
+    out_path: NonEmpty
     report: RoundTripReport | None
     recording: Recording | None
     syllable_times: SyllableTimes | None
