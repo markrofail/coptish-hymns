@@ -150,6 +150,37 @@ BROKEN = [
     ("InterpreterInput", "a last report with no try", ["last_try"], None),
     ("LibraryEntry", "another hymn's fix", ["corrections", 0, "fingerprint"], "other"),
     ("RenderedPage", "no page", ["html_path"], ""),
+    ("SynthSettings", "no sections", ["sections"], []),
+    ("SynthSettings", "first section starts late", ["sections", 0, "first_phrase"], 1),
+    ("SynthSettings", "sections out of order", ["sections", 1, "first_phrase"], 0),
+    ("SynthSettings", "half note under 10 ms", ["sections", 0, "half_note_s"], 0.001),
+    ("SynthSettings", "step of two and a bit octaves", ["sections", 0, "step_cents"], 2401),
+    ("SynthSettings", "zero step", ["sections", 0, "step_cents"], 0),
+    ("SynthSettings", "negative seed", ["seed"], -1),
+    ("SynthSettings", "wobble above one half", ["timing_wobble"], 0.6),
+    ("SynthSettings", "sample rate too low", ["sample_rate_hz"], 4000),
+    ("SynthSettings", "cymbals every zero", ["cymbal_every"], 0),
+    ("SynthSettings", "no reverberation time", ["echo_rt60_s"], 0),
+    ("SynthSettings", "sample rate too high", ["sample_rate_hz"], 48001),
+    ("SynthSettings", "hop under a millisecond", ["hop_s"], 0.0005),
+    ("SynthSettings", "hop over a second", ["hop_s"], 1.5),
+    ("SynthSettings", "negative wobble", ["timing_wobble"], -0.1),
+    ("SynthSettings", "drift above an octave a minute", ["drift_cents_per_min"], 1201),
+    ("SynthSettings", "drift below an octave a minute", ["drift_cents_per_min"], -1201),
+    ("SynthSettings", "reverberation over ten seconds", ["echo_rt60_s"], 10.5),
+    ("SynthSettings", "no base pitch", ["base_hz"], 0),
+    ("SynthSettings", "no slope", ["slope_s"], 0),
+    ("SynthSettings", "no vibrato rate", ["vibrato_rate_hz"], 0),
+    ("SynthSettings", "no vibrato width", ["vibrato_width_cents"], 0),
+    ("SynthSettings", "infinite noise level", ["noise_snr_db"], float("inf")),
+    ("SynthSettings", "noise over 40 dB louder than the voice", ["noise_snr_db"], -41),
+    ("SynthSettings", "noise over 120 dB quieter than the voice", ["noise_snr_db"], 121),
+    ("SynthSettings", "echo over 80 dB below the voice", ["echo_wet_db"], -81),
+    ("SynthSettings", "echo over 20 dB above the voice", ["echo_wet_db"], 21),
+    ("SynthSettings", "cymbals over 80 dB below the voice", ["cymbal_db"], -81),
+    ("SynthSettings", "cymbals over 40 dB above the voice", ["cymbal_db"], 41),
+    ("SynthInput", "no out_path", ["out_path"], ""),
+    ("SynthInput", "a string that does not parse", ["string", "phrases", 0, "notation"], "1 ^^"),
 ]
 
 
@@ -282,3 +313,72 @@ def test_a_fix_may_start_with_a_join_or_a_shifted_motif():
     fix = contracts.ReviewRecord.model_validate(payload)
 
     assert fix.after == "#1+1[1]"
+
+
+def test_a_seed_and_a_tempo_are_enough_and_the_rest_is_a_clean_tone():
+    section = {"first_phrase": 0, "half_note_s": 0.5, "step_cents": 200.0}
+
+    settings = contracts.SynthSettings.model_validate({"seed": 1, "sections": [section]})
+
+    assert settings.model_dump(mode="json") == {
+        "seed": 1,
+        "sections": [section],
+        "base_hz": 130.0,
+        "sample_rate_hz": 16000,
+        "hop_s": 0.01,
+        "slope_s": 0.08,
+        "vibrato_rate_hz": 5.5,
+        "vibrato_width_cents": 100.0,
+        "timing_wobble": 0.0,
+        "drift_cents_per_min": 0.0,
+        "noise_snr_db": None,
+        "echo_rt60_s": None,
+        "echo_wet_db": -6.0,
+        "cymbal_every": None,
+        "cymbal_db": 0.0,
+    }
+
+
+@pytest.mark.parametrize(
+    "path",
+    [["seed"], ["sections"], ["sections", 0, "first_phrase"], ["sections", 0, "half_note_s"], ["sections", 0, "step_cents"]],
+    ids=lambda path: ".".join(map(str, path)),
+)
+def test_a_run_has_to_say_what_it_means(path):
+    payload = copy.deepcopy(example("SynthSettings"))
+    target = payload
+    for key in path[:-1]:
+        target = target[key]
+    del target[path[-1]]
+
+    with pytest.raises(ValidationError):
+        contracts.SynthSettings.model_validate(payload)
+
+
+@pytest.mark.parametrize(
+    "settings, section",
+    [
+        (
+            {
+                "sample_rate_hz": 8000, "hop_s": 0.001, "timing_wobble": 0, "drift_cents_per_min": -1200,
+                "noise_snr_db": -40, "echo_wet_db": -80, "cymbal_db": -80,
+            },
+            {"half_note_s": 0.01, "step_cents": 0.001},
+        ),
+        (
+            {
+                "sample_rate_hz": 48000, "hop_s": 1, "timing_wobble": 0.5, "drift_cents_per_min": 1200,
+                "noise_snr_db": 120, "echo_wet_db": 20, "cymbal_db": 40,
+            },
+            {"half_note_s": 100, "step_cents": 2400},
+        ),
+        ({"echo_rt60_s": 0.001, "cymbal_every": 1}, {}),
+        ({"echo_rt60_s": 10}, {}),
+    ],
+    ids=["lowest", "highest", "smallest echo and cymbal grid", "longest echo"],
+)
+def test_the_ends_of_every_range_are_allowed(settings, section):
+    payload = copy.deepcopy(example("SynthSettings")) | settings
+    payload["sections"][0] |= section
+
+    contracts.SynthSettings.model_validate(payload)

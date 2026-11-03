@@ -6,7 +6,7 @@ structure (where moves and pauses may sit) and motifs (shape, then level within 
 
 from dataclasses import dataclass, replace
 
-from hymnstring.notation.flatten import flatten
+from hymnstring.notation.flatten import walk_chains
 from hymnstring.notation.model import (
     Hymn,
     Item,
@@ -103,17 +103,10 @@ def _motifs(hymn: Hymn) -> list[tuple[int, Problem]]:
     first_shape: dict[int, tuple] = {}  # per label, the shape of its first occurrence in the hymn
     plain_seen: set[int] = set()
     base: dict[tuple[int, int], int] = {}  # (chain, label) -> level of a plain occurrence
-    chain, end_level = 0, 0
-    for index, phrase in enumerate(hymn.phrases):
-        if index == 0 or phrase.join is None:
-            chain += 1  # no join, so no shared level: a new chain with its own level 0
-            start = 0
-        else:
-            start = end_level + (phrase.join.change if isinstance(phrase.join, Move) else 0)
-        items, _ = _without_rising_motifs(phrase.items)  # those are validate_phrase's problems
-        flat = flatten(items, start)
-        end_level = flat.end_level
-        for use in flat.motifs:
+    # rising-repeat motifs are validate_phrase's problems, so they are taken off before walking
+    for walked in walk_chains(hymn, items_of=lambda phrase: _without_rising_motifs(phrase.items)[0]):
+        index, phrase, chain = walked.index, walked.phrase, walked.chain
+        for use in walked.flat.motifs:
 
             def add(rule: str, message: str) -> None:
                 found.append((index, Problem(rule, phrase.phrase_id, f"#{use.label}: {message}")))

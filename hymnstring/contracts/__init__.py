@@ -29,12 +29,14 @@ from hymnstring.contracts.judgement import (
     ReviewRecord,
     RoundTripReport,
 )
+from hymnstring.contracts.synth import GroundTruth, SynthInput, SynthOutput, SynthSettings
 from hymnstring.contracts.text import HymnText, PreparedText, Sounds
 
 __all__ = [
     "AlignerInput",
     "Contract",
     "Empty",
+    "GroundTruth",
     "HymnString",
     "HymnText",
     "InterpreterInput",
@@ -58,5 +60,8 @@ __all__ = [
     "StepInput",
     "StepSize",
     "SyllableTimes",
+    "SynthInput",
+    "SynthOutput",
+    "SynthSettings",
     "Voice",
 ]

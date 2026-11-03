@@ -1,0 +1,28 @@
+{
+  "seed": 7,
+  "sections": [
+    {
+      "first_phrase": 0,
+      "half_note_s": 0.5,
+      "step_cents": 200.0
+    },
+    {
+      "first_phrase": 2,
+      "half_note_s": 0.4,
+      "step_cents": 160.0
+    }
+  ],
+  "base_hz": 130.0,
+  "sample_rate_hz": 16000,
+  "hop_s": 0.01,
+  "slope_s": 0.08,
+  "vibrato_rate_hz": 5.5,
+  "vibrato_width_cents": 100.0,
+  "timing_wobble": 0.05,
+  "drift_cents_per_min": 10.0,
+  "noise_snr_db": 20.0,
+  "echo_rt60_s": 0.8,
+  "echo_wet_db": -6.0,
+  "cymbal_every": 2,
+  "cymbal_db": -3.0
+}

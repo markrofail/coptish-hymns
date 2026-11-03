@@ -107,3 +107,28 @@ def test_coptic_stays_readable_in_the_output_file(tmp_path):
 
     assert status == 0
     assert "ϣⲁ" in target.read_text(encoding="utf-8")
+
+
+def test_the_output_files_folder_is_made_when_it_is_missing(tmp_path):
+    source = tmp_path / "in.json"
+    target = tmp_path / "new" / "folder" / "truth.json"
+    source.write_text("{}", encoding="utf-8")
+
+    done = run_module("empty", "--in", str(source), "--out", str(target))
+
+    assert done.returncode == 0, done.stderr
+    assert json.loads(target.read_text(encoding="utf-8")) == {}
+
+
+def test_an_output_file_that_cannot_be_written_stops_the_node(tmp_path):
+    source = tmp_path / "in.json"
+    target = tmp_path / "taken"
+    source.write_text("{}", encoding="utf-8")
+    target.mkdir()  # a folder where the file should go
+
+    done = run_module("empty", "--in", str(source), "--out", str(target))
+
+    assert done.returncode == 2, done.stderr
+    assert done.stdout == ""
+    assert "Traceback" not in done.stderr
+    assert str(target) in done.stderr

@@ -66,7 +66,12 @@ def cli(node: Node, argv: list[str] | None = None) -> int:
 
     text = json.dumps(output, ensure_ascii=False, indent=2) + "\n"
     if args.target:
-        args.target.write_text(text, encoding="utf-8")
+        try:
+            args.target.parent.mkdir(parents=True, exist_ok=True)
+            args.target.write_text(text, encoding="utf-8")
+        except OSError as error:
+            print(f"{node.name}: cannot write output {args.target}: {error}", file=sys.stderr)
+            return 2
     else:
         sys.stdout.write(text)
     return 0
