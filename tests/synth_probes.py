@@ -1,10 +1,12 @@
 """An ear that shares nothing with the synthesiser: it measures samples with numpy alone.
 
 The synthesiser's tests listen with these, so a mistake in the voice can't hide behind a matching
-mistake in the measuring. Never import `hymnstring` here.
+mistake in the measuring. Never import `hymnstring` here. `note_spans` and `plain_note_errors` read a
+synthesis and its plan only by attribute, so they need no import either.
 """
 
 import math
+from bisect import bisect_right
 
 import numpy as np
 
@@ -60,3 +62,43 @@ def band_db(samples, rate, low_hz, high_hz):
     spectrum = np.fft.rfft(samples)[(hz >= low_hz) & (hz <= high_hz)]
     energy = float(np.sum(np.abs(spectrum) ** 2))
     return 10 * math.log10(energy) if energy > 0 else -math.inf
+
+
+def cents_above(hz, reference_hz):
+    return 1200 * math.log2(hz / reference_hz)
+
+
+def largest_prime_factor(n):
+    factor = 2
+    while factor * factor <= n:
+        if n % factor == 0:
+            n //= factor
+        else:
+            factor += 1
+    return n
+
+
+def note_spans(truth):
+    """The (start, end) seconds of each note: it lasts until the next note or breath starts, or the
+    hymn ends."""
+    marks = {n.start_s for n in truth.note_starts.notes} | {b.start_s for b in truth.note_starts.breaths}
+    marks = sorted(marks | {truth.pulse_unit.sections[-1].end_s})
+    return [(n.start_s, marks[bisect_right(marks, n.start_s)]) for n in truth.note_starts.notes]
+
+
+def plain_note_errors(synthesis, hymn, slope_s):
+    """How far, in cents, the audio's pitch is from the true pitch at the centre of each plain note: one
+    the plan calls a note or a fast bead, at least 80 ms long, with no slide within 40 ms of its centre."""
+    track = synthesis.truth.pitch_track
+    events = hymn.events
+    notes = [(i, event) for i, event in enumerate(events) if event.kind != "pause"]
+    errors = []
+    for (start, end), (i, event) in zip(note_spans(synthesis.truth), notes, strict=True):
+        centre = (start + end) / 2
+        slides = i + 1 < len(events) and events[i + 1].slides_in  # a smooth move leads to the next note
+        slide_from = end - min(slope_s, (end - start) / 2)  # it takes the last part of the note
+        if event.kind == "vibrato" or end - start < 0.08 or (slides and slide_from - centre <= 0.04):
+            continue
+        heard = measure_f0(synthesis.samples, synthesis.sample_rate_hz, centre)
+        errors.append(abs(cents_above(heard, track.f0_hz[round(centre / track.hop_s)])))  # nearest frame
+    return errors

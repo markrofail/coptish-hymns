@@ -7,11 +7,18 @@ import functools
 import math
 import tracemalloc
 import wave
-from bisect import bisect_right
 
 import numpy as np
 import pytest
-from synth_probes import band_db, level_db, measure_f0
+from synth_probes import (
+    band_db,
+    cents_above,
+    largest_prime_factor,
+    level_db,
+    measure_f0,
+    note_spans,
+    plain_note_errors,
+)
 
 import hymnstring.synth.voice as voice_module
 from hymnstring.contracts import HymnString, SynthSettings
@@ -49,10 +56,6 @@ def string_of(notation):
 def voice(notation, **more):
     """The samples of this notation sung with these settings."""
     return synthesise(string_of(notation), settings(**more)).samples
-
-
-def cents_above(hz, reference_hz):
-    return 1200 * math.log2(hz / reference_hz)
 
 
 def level_around(samples, seconds):
@@ -249,16 +252,6 @@ def test_a_silent_wav_is_written_as_silence(tmp_path):
 # -- memory: the voice is made in blocks, and its FFT is padded (rule 19)
 
 
-def largest_prime_factor(n):
-    factor = 2
-    while factor * factor <= n:
-        if n % factor == 0:
-            n //= factor
-        else:
-            factor += 1
-    return n
-
-
 def awkward_score():
     """LONG with timing wobble, which gives it a sample count with a large prime factor: an FFT of that
     exact length is several times bigger and slower than one of a length with only small factors."""
@@ -333,32 +326,6 @@ def sung(seed):
     synthesis = synthesise(hymn.string, cfg)
     assert synthesis.sample_rate_hz == RATE  # the helpers below listen at this rate
     return synthesis
-
-
-def note_spans(truth):
-    """The (start, end) seconds of each note: it lasts until the next note or breath starts, or the
-    hymn ends."""
-    marks = {n.start_s for n in truth.note_starts.notes} | {b.start_s for b in truth.note_starts.breaths}
-    marks = sorted(marks | {truth.pulse_unit.sections[-1].end_s})
-    return [(n.start_s, marks[bisect_right(marks, n.start_s)]) for n in truth.note_starts.notes]
-
-
-def plain_note_errors(synthesis, hymn, slope_s):
-    """How far, in cents, the audio's pitch is from the true pitch at the centre of each plain note: one
-    the plan calls a note or a fast bead, at least 80 ms long, with no slide within 40 ms of its centre."""
-    track = synthesis.truth.pitch_track
-    events = hymn.events
-    notes = [(i, event) for i, event in enumerate(events) if event.kind != "pause"]
-    errors = []
-    for (start, end), (i, event) in zip(note_spans(synthesis.truth), notes, strict=True):
-        centre = (start + end) / 2
-        slides = i + 1 < len(events) and events[i + 1].slides_in  # a smooth move leads to the next note
-        slide_from = end - min(slope_s, (end - start) / 2)  # it takes the last part of the note
-        if event.kind == "vibrato" or end - start < 0.08 or (slides and slide_from - centre <= 0.04):
-            continue
-        heard = measure_f0(synthesis.samples, synthesis.sample_rate_hz, centre)
-        errors.append(abs(cents_above(heard, track.f0_hz[round(centre / track.hop_s)])))  # nearest frame
-    return errors
 
 
 def voiced_levels(synthesis):

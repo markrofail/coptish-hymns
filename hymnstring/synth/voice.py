@@ -13,6 +13,7 @@ from pathlib import Path
 import numpy as np
 
 from hymnstring.contracts import SynthSettings
+from hymnstring.synth.fft import fast_length
 from hymnstring.synth.score import Score, SungNote, sample_count
 from hymnstring.synth.truth import pitch_at
 
@@ -71,7 +72,7 @@ def _vowel(source: np.ndarray, rate: int) -> np.ndarray:
     a large prime factor takes several times the memory and time. The 0.15 is what every frequency
     keeps, so a high pitch has some voice left."""
     n = len(source)
-    padded = _fast_length(n)
+    padded = fast_length(n)
     spectrum = np.fft.rfft(source, padded)
     del source  # sing passed it straight in, so this frees it for the inverse transform
     step = rate / padded
@@ -80,20 +81,6 @@ def _vowel(source: np.ndarray, rate: int) -> np.ndarray:
         peaks = (gain * np.exp(-0.5 * ((hz - centre) / width) ** 2) for centre, width, gain in FORMANTS)
         spectrum[lo : lo + BLOCK] *= 0.15 + sum(peaks)
     return np.fft.irfft(spectrum, padded)[:n]
-
-
-def _fast_length(n: int) -> int:
-    """The smallest 2**a * 3**b * 5**c that is at least n."""
-    best = 1 << (n - 1).bit_length()  # a power of two always qualifies
-    power_of_five = 1
-    while power_of_five < best:
-        product = power_of_five
-        while product < best:
-            doublings = (-(-n // product) - 1).bit_length()  # how many it takes for the product to reach n
-            best = min(best, product << doublings)
-            product *= 3
-        power_of_five *= 5
-    return best
 
 
 def _loudness(score: Score, count: int, rate: int) -> np.ndarray:
