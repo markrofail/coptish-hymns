@@ -37,7 +37,9 @@ def write_wav(path: Path, samples: np.ndarray, sample_rate_hz: int) -> None:
     peak = np.max(np.abs(samples), initial=0.0)
     scale = 0.9 * 32767 / peak if peak > 0 else 0.0
     pcm = np.round(samples * scale).astype("<i2")
-    with wave.open(str(path), "wb") as out:
+    # Open the file here, not in `wave`: when `wave`'s own open fails, its half-made writer prints a
+    # traceback of its own as it is cleaned up, on top of the OSError.
+    with open(path, "wb") as file, wave.open(file, "wb") as out:
         out.setnchannels(1)
         out.setsampwidth(2)
         out.setframerate(sample_rate_hz)
