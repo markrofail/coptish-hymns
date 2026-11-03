@@ -1,4 +1,7 @@
+import subprocess
+import sys
 from fractions import Fraction
+from pathlib import Path
 
 from hymnstring.notation import Move, parse_hymn, parse_line
 from hymnstring.notation.flatten import FlatNote, FlatPause, MotifUse, RepeatUse, flatten, walk_chains
@@ -211,3 +214,23 @@ def test_a_phrase_can_be_walked_with_other_items():
     walked = walk_chains(hymn, items_of=lambda phrase: phrase.items[:3])  # without the last move and note
 
     assert [[e.level for e in w.flat.events] for w in walked] == [[0, 1], [2]]
+
+
+def test_the_notation_package_imports_neither_contracts_nor_synth_nor_numpy():
+    # in a process of its own, since this one may have loaded all three already
+    code = (
+        "import sys\n"
+        "import hymnstring.notation\n"
+        "banned = ('numpy', 'hymnstring.contracts', 'hymnstring.synth')\n"
+        "print(sorted(name for name in banned if name in sys.modules))\n"
+    )
+    done = subprocess.run(
+        [sys.executable, "-c", code],
+        capture_output=True,
+        text=True,
+        timeout=20,
+        cwd=Path(__file__).parents[1],
+    )
+
+    assert done.returncode == 0, done.stderr
+    assert done.stdout.strip() == "[]"
