@@ -389,3 +389,20 @@ def test_every_true_resung_note_has_a_dip(seed):
     drops = resung_drops(sung(seed))
 
     assert min(drops, default=6) >= 6, f"seed {seed}: {sum(d < 6 for d in drops)} of {len(drops)} shallow"
+
+
+def test_the_50_seeds_give_the_checks_above_enough_to_examine():
+    # A seed with no breath or no re-sung note (seed 28 has no re-sung note) passes its check having
+    # examined nothing, so a change to the generator could empty these checks and leave them green. The
+    # floors are what seeds 0 to 49 give today, counted by the functions the checks themselves use.
+    notes = breaths = dips = 0
+    for seed in range(50):
+        hymn, cfg = planned(seed)
+        synthesis = sung(seed)
+        notes += len(plain_note_errors(synthesis, hymn, cfg.slope_s))
+        breaths += len(synthesis.truth.note_starts.breaths)
+        dips += len(resung_drops(synthesis))
+
+    assert notes >= 1140, f"only {notes} plain notes in the pitch check"
+    assert breaths >= 107, f"only {breaths} breaths in the silence check"
+    assert dips >= 314, f"only {dips} re-sung dips in the dip check"

@@ -193,6 +193,7 @@ def test_true_values_match_the_string(seed):
     assert [(s.start_s, s.end_s, s.half_note_s) for s in truth.pulse_unit.sections] == want.pulse
     assert [(s.start_s, s.end_s, s.step_cents) for s in truth.step_size.sections] == want.steps
     assert [(v.start_s, v.end_s, v.rate_hz, v.width_cents) for v in track.vibrato] == want.vibrato
+    assert truth.pitch_track.hop_s == settings.hop_s
 
     certain = [*starts.notes, *truth.syllable_times.syllables]
     certain += [*truth.pulse_unit.sections, *truth.step_size.sections]
