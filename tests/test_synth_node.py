@@ -111,6 +111,27 @@ def test_a_section_past_the_end_is_exit_2(tmp_path):
     assert not out.parent.exists()  # nothing is made until the singing has worked
 
 
+@pytest.mark.parametrize(
+    "settings",
+    [
+        {"noise_snr_db": -6200.0},
+        {"echo_rt60_s": 1.0, "echo_wet_db": 1e6},
+        {"cymbal_every": 2, "cymbal_db": 1e6},
+    ],
+    ids=["noise", "echo", "cymbals"],
+)
+def test_a_level_out_of_range_is_exit_2(tmp_path, settings):
+    # each of these once passed the contract, then asked for a power of ten too big for a float: an OverflowError
+    out = tmp_path / "loud" / "sung.wav"
+
+    done = run_synth(job(out, **settings))
+
+    assert done.returncode == 2, done.stderr
+    assert "Traceback" not in done.stderr
+    assert done.stdout == ""
+    assert not out.parent.exists()
+
+
 # -- the fixtures are a real run
 
 

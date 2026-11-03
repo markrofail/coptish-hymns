@@ -173,6 +173,12 @@ BROKEN = [
     ("SynthSettings", "no vibrato rate", ["vibrato_rate_hz"], 0),
     ("SynthSettings", "no vibrato width", ["vibrato_width_cents"], 0),
     ("SynthSettings", "infinite noise level", ["noise_snr_db"], float("inf")),
+    ("SynthSettings", "noise over 40 dB louder than the voice", ["noise_snr_db"], -41),
+    ("SynthSettings", "noise over 120 dB quieter than the voice", ["noise_snr_db"], 121),
+    ("SynthSettings", "echo over 80 dB below the voice", ["echo_wet_db"], -81),
+    ("SynthSettings", "echo over 20 dB above the voice", ["echo_wet_db"], 21),
+    ("SynthSettings", "cymbals over 80 dB below the voice", ["cymbal_db"], -81),
+    ("SynthSettings", "cymbals over 40 dB above the voice", ["cymbal_db"], 41),
     ("SynthInput", "no out_path", ["out_path"], ""),
     ("SynthInput", "a string that does not parse", ["string", "phrases", 0, "notation"], "1 ^^"),
 ]
@@ -353,11 +359,17 @@ def test_a_run_has_to_say_what_it_means(path):
     "settings, section",
     [
         (
-            {"sample_rate_hz": 8000, "hop_s": 0.001, "timing_wobble": 0, "drift_cents_per_min": -1200},
+            {
+                "sample_rate_hz": 8000, "hop_s": 0.001, "timing_wobble": 0, "drift_cents_per_min": -1200,
+                "noise_snr_db": -40, "echo_wet_db": -80, "cymbal_db": -80,
+            },
             {"half_note_s": 0.01, "step_cents": 0.001},
         ),
         (
-            {"sample_rate_hz": 48000, "hop_s": 1, "timing_wobble": 0.5, "drift_cents_per_min": 1200},
+            {
+                "sample_rate_hz": 48000, "hop_s": 1, "timing_wobble": 0.5, "drift_cents_per_min": 1200,
+                "noise_snr_db": 120, "echo_wet_db": 20, "cymbal_db": 40,
+            },
             {"half_note_s": 100, "step_cents": 2400},
         ),
         ({"echo_rt60_s": 0.001, "cymbal_every": 1}, {}),

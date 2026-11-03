@@ -31,11 +31,11 @@ class SynthSettings(Contract):
     vibrato_width_cents: Positive = 100.0  # peak to peak
     timing_wobble: Annotated[float, Field(ge=0, le=0.5)] = 0.0  # each length varies by up to this share
     drift_cents_per_min: Annotated[float, Field(ge=-1200, le=1200)] = 0.0
-    noise_snr_db: float | None = None  # none means no noise
+    noise_snr_db: Annotated[float, Field(ge=-40, le=120)] | None = None  # none means no noise
     echo_rt60_s: Annotated[float, Field(gt=0, le=10)] | None = None  # none means no echo
-    echo_wet_db: float = -6.0
+    echo_wet_db: Annotated[float, Field(ge=-80, le=20)] = -6.0
     cymbal_every: Annotated[int, Field(ge=1)] | None = None  # in half-note units; none means no cymbals
-    cymbal_db: float = 0.0
+    cymbal_db: Annotated[float, Field(ge=-80, le=40)] = 0.0
 
     @model_validator(mode="after")
     def sections_start_at_phrase_0_and_rise(self) -> Self:
