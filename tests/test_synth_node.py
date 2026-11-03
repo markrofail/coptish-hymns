@@ -4,7 +4,11 @@ import sys
 import wave
 from pathlib import Path
 
-from hymnstring.contracts import SynthOutput
+import pytest
+
+from hymnstring.contracts import SynthInput, SynthOutput
+from hymnstring.notation import parse_hymn
+from hymnstring.synth import build_score, sample_count, true_values
 
 FIXTURE = Path(__file__).parent.parent / "fixtures" / "contracts" / "synth_input.json"
 
@@ -105,3 +109,45 @@ def test_a_section_past_the_end_is_exit_2(tmp_path):
 
     assert done.returncode == 2, done.stderr
     assert not out.parent.exists()  # nothing is made until the singing has worked
+
+
+# -- the fixtures are a real run
+
+
+def read_fixture(name):
+    return json.loads((FIXTURE.parent / name).read_text(encoding="utf-8"))
+
+
+def without_frames(truth):
+    """The true values without the pitch track's frames, the one part a fixture cuts short."""
+    frames = ("f0_hz", "confidence")
+    track = {key: value for key, value in truth["pitch_track"].items() if key not in frames}
+    return truth | {"pitch_track": track}
+
+
+def test_the_output_fixtures_are_the_run_the_input_fixture_asks_for():
+    given = SynthInput.model_validate(read_fixture("synth_input.json"))
+    cfg = given.settings
+    real = true_values(given.string, cfg).model_dump(mode="json")  # no audio is needed
+    truths = {
+        "ground_truth.json": read_fixture("ground_truth.json"),
+        "synth_output.json": read_fixture("synth_output.json")["truth"],
+    }
+
+    for name, truth in truths.items():
+        kept, run = truth["pitch_track"], real["pitch_track"]
+        count = len(kept["f0_hz"])
+        assert count > 0, name
+        # the frames it keeps are the run's first, and every other field is the run's in full
+        assert kept["f0_hz"] == pytest.approx(run["f0_hz"][:count], rel=1e-12), name
+        assert kept["confidence"] == run["confidence"][:count], name
+        assert without_frames(truth) == without_frames(real), name
+
+    score = build_score(parse_hymn(given.string.text), cfg)
+    assert read_fixture("synth_output.json")["voice"] == {
+        "path": given.out_path,
+        "sample_rate_hz": cfg.sample_rate_hz,
+        "duration_s": sample_count(score, cfg) / cfg.sample_rate_hz,
+        "backend": "bypass",
+        "accompaniment_path": None,
+    }

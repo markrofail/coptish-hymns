@@ -54,7 +54,16 @@ class SynthInput(Contract):
 
 
 class GroundTruth(Contract):
-    """What the audio nodes should find in a synthesised recording."""
+    """What the audio nodes should find in a synthesised recording. These values are exact, so they follow
+    conventions that a measurement would not.
+
+    A note reached by a slide starts where the slide arrives. Its pitch starts moving up to `slope_s`
+    earlier, so a note-onset detector that marks where the pitch starts to move will be early by up to
+    that. Every confidence is 1.0, except a silent pitch frame's, which is 0.0. The true `step_cents` is
+    always the setting, even in a section with no interval to measure, where a measured `StepSize` would
+    be null. The pitch track covers the whole recording, echo tail included, with None wherever the voice
+    is silent. Vibrato `width_cents` is peak to peak.
+    """
 
     pitch_track: PitchTrack
     note_starts: NoteStarts
