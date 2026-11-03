@@ -23,6 +23,7 @@
 - Follow TDD. Expected values are hand-derived literals or come from `random_hymns.py`'s plan. A test must never get its expected value from the code it checks.
 - Match the surrounding code: short module docstrings, the comment density of `hymnstring/harness.py`, frozen dataclasses, no speculative options.
 - The whole suite stays under 60 s. If it doesn't, make the measuring cheaper; never drop seeds.
+- The synthesiser must fit in memory at its limits. Under tracemalloc, the voice peaks at about 5 arrays of n doubles and the room adds at most 8, both pinned by tests. A real run at 1800 s and 48 kHz with every source on needs about 4.4 GB.
 - End every commit message with a `Co-Authored-By:` line naming the model that wrote the commit, as your own attribution instructions give it, followed by exactly this line:
   `Claude-Session: https://claude.ai/code/session_01G42KT8b6fHhNgrLamjj7z1`
 
@@ -42,7 +43,7 @@ These rules are numbered so tasks, tests and reviews can cite them.
 5. A note's hymn level is its chain level (from `walk_chains`) plus its chain's offset. Keep `known`, a dict from motif label to the hymn level of its plain occurrences. For each chain in order: the first motif use in the chain whose label is in `known` sets `offset = known[label] + use.shift - use.start_level`; with none, `offset = 0`. Then, for every use in the chain in order, `known.setdefault(label, offset + use.start_level - use.shift)`. This keeps a motif at one pitch across chains, which the round-trip check will compare. If two motifs in a chain disagree, the first one wins.
 6. Cents grow one section at a time, so a rise is always a rise. Section 0 has `origin_level = 0` and `origin_cents = 0`. Each later section takes `origin_level` from the hymn level of the previous section's last note, and `origin_cents` from that note's `raw_cents`. A section with no notes keeps the origin it was given. Within a section, `raw_cents = origin_cents + (level - origin_level) * step_cents`.
 7. `SungNote.cents` is `raw_cents` minus the lowest `raw_cents` in the hymn, so a note's pitch is `base_hz * 2 ** (cents / 1200)` and `base_hz` is the hymn's lowest note.
-8. The highest pitch reached must stay under half the sample rate: `log2(base_hz) + (max_cents + vibrato_width_cents / 2 + max(0, drift_cents_per_min) * end_seconds / 60) / 1200 < log2(sample_rate_hz / 2)`, checked in logs so that a huge level can't overflow. Otherwise `build_score` raises `SynthError` naming the sample rate.
+8. The highest pitch reached must stay under half the sample rate: `log2(base_hz) + (max_cents + vibrato_width_cents / 2 + max(0, drift_cents_per_min) * end_seconds / 60) / 1200 < log2(sample_rate_hz / 2)`, checked in logs so that a huge level can't overflow. Otherwise `build_score` raises `SynthError` naming the sample rate. The lowest pitch reached must stay at or above `MIN_HZ = 20`, counting vibrato and falling drift, checked in logs the same way: `log2(base_hz) - (vibrato_width_cents / 2 + max(0, -drift_cents_per_min) * end_seconds / 60) / 1200 >= log2(MIN_HZ)`. The lowest note's cents are 0 by rule 7, so `base_hz` is the lowest note's pitch. Rising drift doesn't count. Otherwise `build_score` raises `SynthError` naming 20 Hz.
 
 **Notes**
 
@@ -62,7 +63,7 @@ These rules are numbered so tasks, tests and reviews can cite them.
 
 17. Samples are at `n / sample_rate_hz`. `sample_count(score, settings)` is `ceil(end * rate)`, plus `ceil(echo_rt60_s * rate)` when echo is on, both computed exactly with `Fraction`.
 18. The source is `sum(sin(k * phase) / k)` for `k` up to `MAX_HARMONICS = 30`, where `phase` is the running sum of `2π * f0 / rate` and each harmonic is left out wherever `k * f0` reaches half the sample rate.
-19. An "ah" shape is applied once to the whole source, in the frequency domain with no phase change (`rfft`, multiply, `irfft`): `H(f) = 0.15 + sum(gain * exp(-0.5 * ((f - centre) / width) ** 2))` with `FORMANTS = ((730, 90, 1.0), (1090, 110, 0.7), (2440, 170, 0.3))`.
+19. An "ah" shape is applied once to the whole source, in the frequency domain with no phase change (`rfft`, multiply, `irfft`): `H(f) = 0.15 + sum(gain * exp(-0.5 * ((f - centre) / width) ** 2))` with `FORMANTS = ((730, 90, 1.0), (1090, 110, 0.7), (2440, 170, 0.3))`. The FFT pads the source to the smallest `2**a * 3**b * 5**c` length at or above `sample_count` (`fast_length` in `hymnstring/synth/fft.py`). The source and the shaping run in blocks of `BLOCK = 2 ** 18` samples or frequencies, and the source carries its phase from one block to the next.
 20. Loudness multiplies the shaped source last, so that silence is exactly 0.0. It is 1 while sounding and 0 otherwise, with a linear ramp of `min(RAMP_S, note / 2)` (`RAMP_S = 0.01`) at the start and end of each unbroken run of notes. Both ramps sit inside the note, so loudness at a run's first sample is 0.
 21. A note that follows another with no rest and has cause `resung` or `syllable_start` gets a dip centred on its start: multiply by `1 - DIP_DEPTH * 0.5 * (1 + cos(π * (t - start) / h))` for `|t - start| < h`, with `DIP_DEPTH = 0.9` and `h = min(DIP_S, previous_note / 3, this_note / 3)`, `DIP_S = 0.015`. This is what makes a re-sung note audible. A `pitch_change` note has no dip: its pitch is the cue.
 
@@ -71,8 +72,8 @@ These rules are numbered so tasks, tests and reviews can cite them.
 22. Each random source has its own generator, `np.random.default_rng([seed, PURPOSE])`, with `PURPOSE` one of `TIMING = 0`, `NOISE = 1`, `ECHO = 2`, `CYMBALS = 3`. So turning one source on never changes another. The same seed gives identical samples.
 23. The mix is `voice + cymbals`, then echo, then noise. All levels are relative to `voice_rms`, the RMS of the voice's non-zero samples.
 24. Cymbals are on when `cymbal_every` is set. Each section hits at `section.start + k * cymbal_every * half_note_s`, while that is before `section.end`. Timing wobble doesn't move the hits. A hit is `CYMBAL_HIT_S = 0.4` seconds of `np.diff` of white noise, times `exp(-t / 0.08)`, scaled so that its peak is `voice_rms * 10 ** (cymbal_db / 20)`.
-25. Echo is on when `echo_rt60_s` is set. The response is 1 at time 0, followed by white noise times `10 ** (-3 * t / rt60)`, for `ceil(rt60 * rate)` samples. The noise part is scaled so its total energy is `10 ** (echo_wet_db / 10)`. Convolve by FFT and cut to `sample_count`.
-26. Noise is on when `noise_snr_db` is set. It is white, runs over the whole recording, and is scaled so its RMS is exactly `voice_rms * 10 ** (-noise_snr_db / 20)`.
+25. Echo is on when `echo_rt60_s` is set. The response is 1 at time 0, followed by white noise times `10 ** (-3 * t / rt60)`, for `ceil(rt60 * rate)` samples. The noise part is scaled so its total energy is `10 ** (echo_wet_db / 10)`. The convolution is linear: both signals are padded to `fast_length(sample_count + len(response) - 1)`, so that nothing wraps round, and the result is cut to `sample_count`.
+26. Noise is on when `noise_snr_db` is set. It is white, runs over the whole recording, and is scaled so its RMS is exactly `voice_rms * 10 ** (-noise_snr_db / 20)`. The three dB settings are bounded, inclusive, so that no power of ten overflows: `noise_snr_db` from -40 to 120, `echo_wet_db` from -80 to 20 and `cymbal_db` from -80 to 40.
 27. `Synthesis.samples` is the raw float mix. `write_wav` writes mono 16-bit PCM with its peak at `0.9` of full scale.
 
 **The true values**
@@ -503,7 +504,7 @@ What it must generate:
 ### Task 5: Noise, echo and cymbals
 
 **Files:**
-- Create: `hymnstring/synth/room.py`
+- Create: `hymnstring/synth/room.py`, `hymnstring/synth/fft.py`
 - Modify: `hymnstring/synth/__init__.py`
 - Test: `tests/test_synth_room.py`
 

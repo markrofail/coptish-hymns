@@ -5,6 +5,9 @@ pass. The plan's levels, repeat copies, joins, syllables, causes and chain offse
 with plain arithmetic, never with `flatten`, `walk_chains` or the score, so checking the synthesiser's
 true values against it compares two independent derivations of one string. Rule numbers are those in
 docs/superpowers/plans/2026-11-02-synthesiser.md.
+
+Some vibrato notes are shorter than two cycles of the drawn vibrato rate, so a vibrato detector scored
+on these hymns should allow for spans too short to measure a rate.
 """
 
 import random
