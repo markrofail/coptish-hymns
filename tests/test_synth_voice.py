@@ -5,6 +5,7 @@ Rule numbers are those in docs/superpowers/plans/2026-11-02-synthesiser.md.
 
 import functools
 import math
+import tracemalloc
 import wave
 from bisect import bisect_right
 
@@ -12,12 +13,22 @@ import numpy as np
 import pytest
 from synth_probes import band_db, level_db, measure_f0
 
+import hymnstring.synth.voice as voice_module
 from hymnstring.contracts import HymnString, SynthSettings
 from hymnstring.contracts.synth import SynthSection
 from hymnstring.notation import parse_hymn
-from hymnstring.synth import build_score, random_hymn, random_settings, sing, synthesise, write_wav
+from hymnstring.synth import (
+    build_score,
+    random_hymn,
+    random_settings,
+    sample_count,
+    sing,
+    synthesise,
+    write_wav,
+)
 
 DEMO = "#1[A:2 ^ 1 v 1] ^ lē:~2 .2 v (lou:1)x3^ >1{i:*} a:2 !v2 #1[(a):2 ^ 1 v 1] v 4"
+LONG = "a:~24 ^ 24 b:24 .8 24 ^ 28"  # 132 half-note units, 66 s at 0.5 s: a vibrato note, a slide, a rest
 RATE = 16000
 
 
@@ -233,6 +244,72 @@ def test_a_silent_wav_is_written_as_silence(tmp_path):
 
     with wave.open(str(path), "rb") as wav:
         assert wav.readframes(wav.getnframes()) == bytes(2 * 160)
+
+
+# -- memory: the voice is made in blocks, and its FFT is padded (rule 19)
+
+
+def largest_prime_factor(n):
+    factor = 2
+    while factor * factor <= n:
+        if n % factor == 0:
+            n //= factor
+        else:
+            factor += 1
+    return n
+
+
+def awkward_score():
+    """LONG with timing wobble, which gives it a sample count with a large prime factor: an FFT of that
+    exact length is several times bigger and slower than one of a length with only small factors."""
+    cfg = settings(half_note_s=0.5, timing_wobble=0.1)
+    score = build_score(parse_hymn(f"p1 ltr: {LONG}"), cfg)
+    assert largest_prime_factor(sample_count(score, cfg)) > 1000
+    return score, cfg
+
+
+def test_the_voice_needs_at_most_eight_arrays_of_memory():
+    score, cfg = awkward_score()
+    n = sample_count(score, cfg)
+
+    tracemalloc.start()  # it sees numpy's buffers
+    try:
+        samples = sing(score, cfg)
+        peak = tracemalloc.get_traced_memory()[1]
+    finally:
+        tracemalloc.stop()
+
+    assert len(samples) == n
+    assert peak <= 8 * n * 8, f"{peak / (n * 8):.1f} arrays of {n} doubles"
+
+
+def test_the_vowel_fft_is_padded_to_a_length_with_small_factors(monkeypatch):
+    # tracemalloc can't see what an awkward length makes the transform allocate, so look at the length
+    score, cfg = awkward_score()
+    n = sample_count(score, cfg)
+    lengths, real_rfft = [], np.fft.rfft
+
+    def spy(a, n=None, *more, **named):
+        lengths.append(len(a) if n is None else n)
+        return real_rfft(a, n, *more, **named)
+
+    monkeypatch.setattr(np.fft, "rfft", spy)
+    sing(score, cfg)
+
+    [length] = lengths  # one transform, over the whole signal
+    assert n <= length <= 1.05 * n
+    assert largest_prime_factor(length) <= 5
+
+
+def test_blocks_do_not_change_the_samples(monkeypatch):
+    # DEMO has a vibrato note, slides, a rest and dips, and blocks of 4096 samples cut across all of them
+    monkeypatch.setattr(voice_module, "BLOCK", 2**30)
+    whole = voice(DEMO)
+    monkeypatch.setattr(voice_module, "BLOCK", 4096)
+    blocks = voice(DEMO)
+
+    assert len(whole) == len(blocks) == 11 * 16000
+    assert np.max(np.abs(blocks - whole)) <= 1e-9 * np.max(np.abs(whole))
 
 
 # -- the audio carries the true values (50 random strings)
