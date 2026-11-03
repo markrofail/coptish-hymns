@@ -10,6 +10,7 @@ from hymnstring.synth import (
     CYMBALS,
     ECHO,
     MAX_SECONDS,
+    MIN_HZ,
     NOISE,
     TIMING,
     SynthError,
@@ -298,6 +299,35 @@ def test_the_top_of_the_range_counts_the_base_the_vibrato_and_rising_drift(more,
             score_of("p1 ltr: a:1 ^5 1", step_cents=1200.0, **more)
 
 
+# 40 Hz sits 1200 cents above the 20 Hz floor, which is what the vibrato's depth (half its width) and any
+# falling drift can use up. A note of 110 half notes lasts 55 s at 0.5 s a half note, and 112 lasts 56 s.
+@pytest.mark.parametrize(
+    "length, more, fits",
+    [
+        (110, {"vibrato_width_cents": 2400.0}, True),  # a depth of 1200 cents: exactly the floor
+        (110, {"vibrato_width_cents": 2402.0}, False),  # 1201 is under it
+        (110, {"vibrato_width_cents": 200.0, "drift_cents_per_min": -1200.0}, True),  # 100 + 1100: exactly
+        (112, {"vibrato_width_cents": 200.0, "drift_cents_per_min": -1200.0}, False),  # 100 + 1120 is under
+        (112, {"vibrato_width_cents": 2400.0, "drift_cents_per_min": 1200.0}, True),  # rising never lowers it
+    ],
+    ids=[
+        "vibrato to the floor", "vibrato past it", "falling drift to the floor", "falling drift past it",
+        "rising drift",
+    ],
+)
+def test_the_bottom_of_the_range_counts_the_vibrato_and_falling_drift(length, more, fits):
+    if fits:
+        assert len(score_of(f"p1 ltr: a:{length}", base_hz=40.0, **more).notes) == 1
+    else:
+        with pytest.raises(SynthError, match="20 Hz"):
+            score_of(f"p1 ltr: a:{length}", base_hz=40.0, **more)
+
+
+def test_a_base_under_the_floor_fails_with_no_drift_and_no_vibrato_note():
+    with pytest.raises(SynthError, match="20 Hz"):
+        score_of("p1 ltr: a:2", base_hz=19.0)
+
+
 # -- syllables (rule 9)
 
 
@@ -434,5 +464,5 @@ def test_an_echo_tail_is_counted_exactly_too():
     assert sample_count(build_score(parse_hymn("p1 ltr: a:2"), cfg), cfg) == 16000 + 1601
 
 
-def test_the_random_sources_and_the_limit_have_their_fixed_values():
-    assert (TIMING, NOISE, ECHO, CYMBALS, MAX_SECONDS) == (0, 1, 2, 3, 1800)
+def test_the_random_sources_and_the_limits_have_their_fixed_values():
+    assert (TIMING, NOISE, ECHO, CYMBALS, MAX_SECONDS, MIN_HZ) == (0, 1, 2, 3, 1800, 20)

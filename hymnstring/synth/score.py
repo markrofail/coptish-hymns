@@ -25,12 +25,13 @@ ECHO = 2
 CYMBALS = 3
 
 MAX_SECONDS = 1800  # so that a short string can't ask for an enormous recording
+MIN_HZ = 20  # the lowest pitch a hymn may reach, counting its vibrato and any falling drift
 
 Cause = Literal["syllable_start", "pitch_change", "resung"]
 
 
 class SynthError(ValueError):
-    """The string can't be sung as asked: it is too long or too high, or no syllable starts it."""
+    """The string can't be sung as asked: it is too long, too high or too low, or no syllable starts it."""
 
 
 @dataclass(frozen=True)
@@ -68,8 +69,8 @@ class Score:
 
 
 def build_score(hymn: Hymn, settings: SynthSettings) -> Score:
-    """The hymn in exact time and pitch. Raises SynthError if it lasts too long, climbs too high, has
-    no syllable on its first note, or has a section that starts after its last phrase."""
+    """The hymn in exact time and pitch. Raises SynthError if it lasts too long, climbs too high or
+    sinks too low, has no syllable on its first note, or has a section that starts after its last phrase."""
     in_section = _sections_of_phrases(hymn, settings)
     walked = list(walk_chains(hymn))
     offsets = _chain_offsets(walked)
@@ -110,6 +111,7 @@ def build_score(hymn: Hymn, settings: SynthSettings) -> Score:
             now = end
 
     _check_the_top(cents, now, settings)
+    _check_the_bottom(now, settings)
     bounds = [phrase_starts[s.first_phrase] for s in settings.sections] + [now]
     sections = tuple(
         TimedSection(start, end, s.half_note_s, s.step_cents)
@@ -196,4 +198,16 @@ def _check_the_top(cents: list[float], end: Fraction, settings: SynthSettings) -
         raise SynthError(
             f"the highest pitch must stay under half the sample rate ({settings.sample_rate_hz // 2} Hz): "
             "lower base_hz, the climb or the vibrato, or raise sample_rate_hz"
+        )
+
+
+def _check_the_bottom(end: Fraction, settings: SynthSettings) -> None:
+    """Rule 8: the lowest note, its vibrato and any falling drift stay at or above MIN_HZ. The lowest
+    note's cents are 0 (rule 7), so `base_hz` is its pitch. Checked in logs, like the top."""
+    falling = max(0.0, -settings.drift_cents_per_min) * float(end) / 60
+    low_cents = settings.vibrato_width_cents / 2 + falling
+    if math.log2(settings.base_hz) - low_cents / 1200 < math.log2(MIN_HZ):
+        raise SynthError(
+            f"the lowest pitch must stay at or above {MIN_HZ} Hz: "
+            "raise base_hz, or lower the vibrato or the falling drift"
         )
