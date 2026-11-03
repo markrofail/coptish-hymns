@@ -7,6 +7,7 @@ import numpy as np
 from hymnstring.contracts import GroundTruth, HymnString, SynthSettings
 from hymnstring.notation import parse_hymn
 from hymnstring.synth.random_hymns import PlannedEvent, RandomHymn, random_hymn, random_settings
+from hymnstring.synth.room import CYMBAL_HIT_S, echo_response, in_the_room
 from hymnstring.synth.score import (
     CYMBALS,
     ECHO,
@@ -35,13 +36,16 @@ class Synthesis:
 
 
 def synthesise(string: HymnString, settings: SynthSettings) -> Synthesis:
-    """Sings the string. The samples and the true values come from one score, so they can't disagree."""
+    """Sings the string and puts it in its room. The samples and the true values come from one score,
+    so they can't disagree."""
     score = build_score(parse_hymn(string.text), settings)
-    return Synthesis(sing(score, settings), settings.sample_rate_hz, truth_of(score, settings))
+    samples = in_the_room(sing(score, settings), score, settings)
+    return Synthesis(samples, settings.sample_rate_hz, truth_of(score, settings))
 
 
 __all__ = [
     "CYMBALS",
+    "CYMBAL_HIT_S",
     "ECHO",
     "MAX_SECONDS",
     "NOISE",
@@ -55,6 +59,8 @@ __all__ = [
     "TIMING",
     "TimedSection",
     "build_score",
+    "echo_response",
+    "in_the_room",
     "pitch_at",
     "random_hymn",
     "random_settings",
